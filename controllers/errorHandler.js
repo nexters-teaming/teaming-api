@@ -8,11 +8,11 @@
  * @param msg : error massage
  * @returns [Object] Error
  */
-var errorHandler = function(err, msg) {
+var errorHandler = function(err) {
 
     if (err) {
         var error;
-        if (typeof msg != 'undefined') {
+        if (typeof err.message != 'undefined') {
             error = new Error(msg);
             error.status = err;
         } else {

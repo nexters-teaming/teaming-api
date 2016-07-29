@@ -2,8 +2,9 @@
  * Created by YS on 2016-07-28.
  */
 var userModel = require('../models/userModel');
+var facebook = require('./facebook');
 var Promise = require("bluebird");
-var errorHandler = require('./errorHandler');
+//var errorHandler = require('./errorHandler');
 
 var joinUser = function(req, res, next) {
     var data = {
@@ -12,14 +13,15 @@ var joinUser = function(req, res, next) {
         username : req.body.username
     };
 
-    userModel.joinUser(data)
+    facebook.checkToken(data)
+        .then(userModel.joinUser)
         .then(function () {
             res.statusCode = 200;
             res.json({
                 msg : '사용자 등록 완료'
             });
         })
-        .catch(errorHandler);
+        .catch(next);
 };
 
 var deleteUser = function(req, res, next) {
@@ -34,7 +36,7 @@ var deleteUser = function(req, res, next) {
                 msg : '로그아웃 완료'
             });
         })
-        .catch(errorHandler);
+        .catch(next);
 };
 
 var getUser = function(req, res, next) {
@@ -48,15 +50,10 @@ var getUser = function(req, res, next) {
             res.statusCode = 200;
             res.json({
                 msg : '사용자 정보 가져옴',
-                //TODO data : data
-                data : {
-                    user_id : 1000,
-                    username : "tester"
-                }
-                // END TODO
+                data : data
             });
         })
-        .catch(errorHandler);
+        .catch(next);
 };
 
 var editUser = function(req, res, next) {
@@ -67,19 +64,15 @@ var editUser = function(req, res, next) {
     };
 
     userModel.editUser(data)
+        .then(userModel.getUser)
         .then(function (data) {
             res.statusCode = 200;
             res.json({
                 msg : '사용자 정보 수정 완료',
-                //TODO data : data
-                data : {
-                    user_id : 1000,
-                    username : "tester"
-                }
-                // END TODO
+                data : data
             });
         })
-        .catch(errorHandler);
+        .catch(next);
 };
 
 module.exports.joinUser = joinUser;
