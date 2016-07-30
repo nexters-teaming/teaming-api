@@ -61,12 +61,14 @@ var makeTeam = function(req, res, next) {
     };
 
     teamModel.makeTeam(data)
+        .then(teamModel.getTeamInfo)
         .then(function (data) {
             res.statusCode = 200;
             res.json({
                 msg : '팀 정보 저장 완료',
+                data : data
                 // TODO data : data
-                data : {
+                /*data : {
                     team_id : "10",
                     teamname : "nexters",
                     description : "개발자, 디자이너 모임",
@@ -78,7 +80,7 @@ var makeTeam = function(req, res, next) {
                     manager : "10101010",
                     start_date : "2016-07-01 14:04:00",
                     end_date : "2016-07-21 14:04:00"
-                }
+                }*/
                 // END TODO
             });
         })

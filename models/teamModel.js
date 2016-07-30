@@ -3,7 +3,7 @@
  */
 var credentials = require('../credentials');
 var Promise = require("bluebird");
-var pool = require('./mysqlSetting');
+var mysqlSetting = require('./mysqlSetting');
 
 var team_model = {
     getTeamList : function(data) {
@@ -189,7 +189,33 @@ var team_model = {
     },
     makeTeam : function(data) {
         return new Promise(function(resolved, rejected) {
-            resolved();
+            mysqlSetting.getPool()
+                .then(mysqlSetting.getConnection)
+                .then(mysqlSetting.connBeginTransaction)
+                .then(function(connection) {
+                    var insert = [data.user_id, data.username, data.access_token, data.access_token];
+                    var sql = "INSERT INTO Team SET " +
+                        "`user_id` = ?, " +
+                        "`username` = ?, " +
+                        "`access_token` = ? " +
+                        "ON DUPLICATE KEY UPDATE " +
+                        "`access_token` = ? ";
+                    connection.query(sql, insert, function (err, rows) {
+                        if (err) {
+                            var error = new Error("로그인 실패");
+                            error.status = 500;
+                            console.error(err);
+                            return rejected(error);
+                        } else if(rows.affectedRows == 0) {
+                            var error = new Error("로그인 실패");
+                            error.status = 500;
+                            return rejected(error);
+                        }
+                        connection.release();
+                        return resolved(connection, rows.insertId);
+                    });
+                })
+                .then(mysqlSetting.commitTransaction);
         });
     },
     getTeamInfo : function(data) {
@@ -211,7 +237,7 @@ var team_model = {
         return new Promise(function(resolved, rejected) {
             resolved();
         });
-    }
+    },
 };
 
 module.exports = team_model;
