@@ -54,9 +54,9 @@ var connBeginTransaction = function(connection) {
     });
 };
 
-var commitTransaction = function(connection, data) {
+var commitTransaction = function(data) {
     return new Promise(function(resolved, rejected) {
-        connection.commit(function (err) {
+        data.connection.commit(function (err) {
             if (err) {
                 var error = new Error("에러 발생");
                 error.status = 500;
@@ -64,7 +64,7 @@ var commitTransaction = function(connection, data) {
                 return rejected(error);
             }
 
-            return resolved(data);
+            return resolved(data.result);
         });
     });
 };

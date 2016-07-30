@@ -13,6 +13,7 @@ var joinUser = function(req, res, next) {
         username : req.body.username
     };
 
+    // TODO validation
     facebook.checkToken(data)
         .then(userModel.joinUser)
         .then(function () {
@@ -63,6 +64,7 @@ var editUser = function(req, res, next) {
         username : req.body.username
     };
 
+    // TODO validation
     userModel.editUser(data)
         .then(userModel.getUser)
         .then(function (data) {

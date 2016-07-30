@@ -193,34 +193,101 @@ var team_model = {
                 .then(mysqlSetting.getConnection)
                 .then(mysqlSetting.connBeginTransaction)
                 .then(function(connection) {
-                    var insert = [data.user_id, data.username, data.access_token, data.access_token];
-                    var sql = "INSERT INTO Team SET " +
-                        "`user_id` = ?, " +
-                        "`username` = ?, " +
-                        "`access_token` = ? " +
-                        "ON DUPLICATE KEY UPDATE " +
-                        "`access_token` = ? ";
-                    connection.query(sql, insert, function (err, rows) {
-                        if (err) {
-                            var error = new Error("로그인 실패");
-                            error.status = 500;
-                            console.error(err);
-                            return rejected(error);
-                        } else if(rows.affectedRows == 0) {
-                            var error = new Error("로그인 실패");
-                            error.status = 500;
-                            return rejected(error);
-                        }
-                        connection.release();
-                        return resolved(connection, rows.insertId);
+                    return new Promise(function(resolved, rejected) {
+                        var insert = [data.teamname, data.description, data.access_token, data.start_date, data.end_date];
+                        var sql = "INSERT INTO Team SET " +
+                            "`teamname` = ?, " +
+                            "`description` = ?, " +
+                            "`manager` = (SELECT user_id FROM User WHERE access_token = ?), " +
+                            "`start_date` = ?, " +
+                            "`end_date` = ? ";
+                        connection.query(sql, insert, function (err, rows) {
+                            if (err) {
+                                var error = new Error("팀 생성 실패");
+                                error.status = 500;
+                                console.error(err);
+                                return rejected(error);
+                            } else if(rows.affectedRows == 0) {
+                                var error = new Error("팀 생성 실패");
+                                error.status = 500;
+                                return rejected(error);
+                            }
+                            return resolved({connection: connection, team_id: rows.insertId});
+                        });
                     });
                 })
-                .then(mysqlSetting.commitTransaction);
+                .then(function(context) {
+                    return new Promise(function(resolved, rejected) {
+                        var select = [context.team_id];
+                        var sql = "SELECT team_id, teamname, description, manager, start_date, end_date FROM Team " +
+                            "WHERE team_id = ? ";
+                        context.connection.query(sql, select, function (err, rows) {
+                            if (err) {
+                                var error = new Error("가져오기 실패");
+                                error.status = 500;
+                                console.error(err);
+                                return rejected(error);
+                            } else if (rows.length == 0) {
+                                var error = new Error("팀 정보 없음");
+                                error.status = 500;
+                                console.error("팀 정보 없음");
+                                return rejected(error);
+                            }
+                            return resolved({connection: context.connection, team_info: rows[0]});
+                        });
+                    });
+                })
+                .then(function(context) {
+                    return new Promise(function(resolved, rejected) {
+                        var insert = [data.access_token, context.team_info.team_id];
+                        var sql = "INSERT INTO TeamMember SET " +
+                            "`team_user_id` = (SELECT user_id FROM User WHERE access_token = ?), " +
+                            "`member_team_id` = ? ";
+                        context.connection.query(sql, insert, function (err, rows) {
+                            if (err) {
+                                var error = new Error("팀 생성 실패");
+                                error.status = 500;
+                                console.error(err);
+                                return rejected(error);
+                            } else if(rows.affectedRows == 0) {
+                                var error = new Error("팀 생성 실패");
+                                error.status = 500;
+                                return rejected(error);
+                            }
+                            return resolved({connection: context.connection, result: context.team_info});
+                        });
+                    });
+                })
+                .then(mysqlSetting.commitTransaction)
+                .then(function(data) {
+                    return resolved(data);
+                });
         });
     },
     getTeamInfo : function(data) {
         return new Promise(function(resolved, rejected) {
-            resolved();
+            mysqlSetting.getPool()
+                .then(mysqlSetting.getConnection)
+                .then(function(connection) {
+                    var select = [data.team_id];
+                    var sql = "SELECT team_id, teamname, description, manager, start_date, end_date FROM Team " +
+                        "WHERE team_id = ? ";
+                    connection.query(sql, select, function (err, rows) {
+                        if (err) {
+                            var error = new Error("가져오기 실패");
+                            error.status = 500;
+                            console.error(err);
+                            return rejected(error);
+                        } else if (rows.length == 0) {
+                            var error = new Error("팀 정보 없음");
+                            error.status = 500;
+                            console.error("팀 정보 없음");
+                            return rejected(error);
+                        }
+                        connection.release();
+                        return resolved(rows);
+                    });
+                });
         });
     },
     editTeamInfo : function(data) {

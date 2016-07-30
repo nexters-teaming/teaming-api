@@ -54,34 +54,25 @@ var makeTeam = function(req, res, next) {
         access_token : req.header('access-token'),
         teamname : req.body.teamname,
         description : req.body.description,
-        manager : req.body.manager,
-        section : req.body.section,
         start_date : req.body.start_date,
         end_date : req.body.end_date
     };
 
+    // TODO validation
+
     teamModel.makeTeam(data)
-        .then(teamModel.getTeamInfo)
+        //.then(teamModel.getTeamInfo)
         .then(function (data) {
             res.statusCode = 200;
             res.json({
                 msg : '팀 정보 저장 완료',
                 data : data
-                // TODO data : data
-                /*data : {
-                    team_id : "10",
-                    teamname : "nexters",
-                    description : "개발자, 디자이너 모임",
-                    team_progress : 40,
-                    section_progress : {
-                        "개발자" : 20,
-                        "디자이너" : 20
-                    },
-                    manager : "10101010",
-                    start_date : "2016-07-01 14:04:00",
-                    end_date : "2016-07-21 14:04:00"
+                // TODO data 안에 team_progress, section_progress 추가
+                /*team_progress : 40,
+                section_progress : {
+                    "개발자" : 20,
+                    "디자이너" : 20
                 }*/
-                // END TODO
             });
         })
         .catch(errorHandler);
