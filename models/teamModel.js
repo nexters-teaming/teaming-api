@@ -8,185 +8,66 @@ var mysqlSetting = require('./mysqlSetting');
 var team_model = {
     getTeamList : function(data) {
         return new Promise(function(resolved, rejected) {
-            resolved();
-            /*pool.getConnection(function (err, connection) {
-                if (err) return rejected(500, "에러 발생." );
-                var select = [];
-                var sql = "SELECT prod_id, prod_name, prod_price, category_a, category_b, prod_desc, prod_img, size, GROUP_CONCAT(KeyColor.color_name) AS color_list " +
-                    "FROM ShopProduct " +
-                    "INNER JOIN KeyColor " +
-                    "ON ShopProduct.prod_id = KeyColor.color_prod_id ";
-                if (typeof  data.category_b == 'undefined') {
-                    select.push(data.category_a);
-                    sql += "WHERE category_a = ? ";
-                } else {
-                    select.push(data.category_a, data.category_b);
-                    sql += "WHERE category_a = ? " +
-                        "AND category_b = ? ";
-                }
+            mysqlSetting.getPool()
+                .then(mysqlSetting.getConnection)
+                .then(function(connection) {
+                    var select = [];
+                    var sql = "SELECT team_id, teamname, description, GROUP_CONCAT(TeamMember.team_user_id) AS party, start_date, end_date " +
+                        "FROM Team " +
+                        "INNER JOIN TeamMember " +
+                        "ON Team.team_id = TeamMember.member_team_id ";
 
-                sql += "GROUP BY prod_id LIMIT 20 ";
-                connection.query(sql, select, function (err, rows) {
-                    if (err) {
-                        return rejected(500, "정보 수정에 실패했습니다." );
-                    } else if(rows.affectedRows == 0) {
-                        return rejected(204, "정보 수정에 실패했습니다. 원인: 유저가 없음" );
-                    }
-                    connection.release();
-                    return resolved(rows);
-                });
-            });*/
-        });
-    },
-
-    getProducts: function (data, callback) {
-        // DB에 게시물정보 저장
-        pool.getConnection(function (err, connection) {
-            if (err) return callback({result: false, msg: "에러 발생. 원인: " + err});
-            connection.beginTransaction(function (err) {
-                if (err) throw err;
-                var async = require('async');
-                async.waterfall([
-                    function (tran_callback) {
-                        var select = [data.user_id, data.access_token, data.username, data.access_token];
-                        connection.query("SELECT prod_id, prod_name, prod_price, category_a, category_b, prod_desc, prod_img, size, GROUP_CONCAT(KeyColor.color_name) AS color_list " +
-                            "FROM ShopProduct " +
-                            "INNER JOIN KeyColor " +
-                            "ON ShopProduct.prod_id = KeyColor.color_prod_id " +
-                            "GROUP BY prod_id " +
-                            "LIMIT 20 ", select, function (err, rows) {
-
-                            if (err) {
-                                connection.rollback(function () {
-                                    console.error('rollback error');
-                                    return tran_callback({result: false, msg: '처리중 오류가 발생했습니다. 원인: ' + err});
-                                });
-                            }
-                            connection.release();
-                            connection.commit(function (err) {
-                                if (err) {
-                                    console.error(err);
-                                    connection.rollback(function () {
-                                        console.error('rollback error');
-                                        throw err;
-                                    });
-                                    return tran_callback({result: false, msg: '처리중 오류가 발생했습니다. 원인: ' + err});
-                                }
-                                if (rows.length > 0)
-                                    tran_callback(null, rows);
-                                else
-                                    tran_callback(204);
-                            });
+                    sql += "GROUP BY team_id LIMIT 20 ";
+                    connection.query(sql, select, function (err, rows) {
+                        if (err) {
+                            var error = new Error("팀 목록 가져오기 실패");
+                            error.status = 500;
+                            console.error(err);
+                            return rejected(error);
+                        } else if(rows.affectedRows == 0) {
+                            var error = new Error("팀 목록 가져오기 실패");
+                            error.status = 500;
+                            return rejected(error);
+                        }
+                        rows.forEach(function(col) {
+                            col.party = JSON.parse("["+col.party+"]");
                         });
-                    }
-                ], function (err, result) {
-                    if (err) return {result: false, msg: err};
-                    return callback(true, "목록 가져옴", result);
-                });
-            });
-        });
-    },
-
-    setProduct : function(data, callback) {
-        pool.getConnection(function (err, connection) {
-            if (err) return callback({result: false, msg: "에러 발생. 원인: " + err});
-            connection.beginTransaction(function (err) {
-                if (err) throw err;
-                var async = require('async');
-                async.waterfall([
-                    function (tran_callback) {
-                        var insert = [data.prod_name, data.prod_price, data.category_a, data.category_a, data.prod_desc, data.prod_img, data.size];
-                        connection.query("INSERT ShopProduct SET " +
-                            "prod_name = ?, " +
-                            "prod_price = ?, " +
-                            "category_a = ?, " +
-                            "category_b = ?, " +
-                            "prod_desc = ?, " +
-                            "prod_img = ?, " +
-                            "size = ? ", insert, function (err, rows) {
-
-                            if (err) {
-                                connection.rollback(function () {
-                                    console.error('rollback error');
-                                    return tran_callback({result: false, msg: '처리중 오류가 발생했습니다. 원인: ' + err});
-                                });
-                            }
-                            connection.release();
-
-                            tran_callback(null, rows.insertId);
-                        });
-                    }, function(prod_id, tran_callback) {
-                        data.color_list.forEach(function (col, index, arr) {
-                            var insert = [col, prod_id];
-                            connection.query("INSERT KeyColor SET " +
-                                "color_name = ?, " +
-                                "color_prod_id = ? " , insert, function (err, rows) {
-
-                                if (err) {
-                                    connection.rollback(function () {
-                                        console.error('rollback error');
-                                        return tran_callback({result: false, msg: '처리중 오류가 발생했습니다. 원인: ' + err});
-                                    });
-                                }
-                                connection.release();
-                            });
-                        });
-
-                        connection.commit(function (err) {
-                            if (err) {
-                                console.error(err);
-                                connection.rollback(function () {
-                                    console.error('rollback error');
-                                    throw err;
-                                });
-                                return tran_callback({result: false, msg: '처리중 오류가 발생했습니다. 원인: ' + err});
-                            }
-                            tran_callback(null);
-                        });
-                    }
-                ], function (err) {
-                    if (err) return {result: false, msg: err};
-                    return callback(true, "삽입 성공");
-                });
-            });
-        });
-    },
-
-    getProductsByCategory : function(data, callback) {
-        pool.getConnection(function (err, connection) {
-            if (err) return callback({ result: false, msg: "에러 발생. 원인: "+err });
-            var select = [];
-            var sql = "SELECT prod_id, prod_name, prod_price, category_a, category_b, prod_desc, prod_img, size, GROUP_CONCAT(KeyColor.color_name) AS color_list " +
-                "FROM ShopProduct " +
-                "INNER JOIN KeyColor " +
-                "ON ShopProduct.prod_id = KeyColor.color_prod_id ";
-            if (typeof  data.category_b == 'undefined') {
-                select.push(data.category_a);
-                sql += "WHERE category_a = ? ";
-            } else {
-                select.push(data.category_a, data.category_b);
-                sql += "WHERE category_a = ? " +
-                    "AND category_b = ? ";
-            }
-
-            sql += "GROUP BY prod_id LIMIT 20 ";
-            connection.query(sql, select, function (err, rows) {
-                if (err) {
-                    return callback(false, "정보 수정에 실패했습니다. 원인: "+err);
-                } else if(rows.affectedRows == 0) {
-                    return callback(false, "정보 수정에 실패했습니다. 원인: 유저가 없음" );
-                }
-                connection.release();
-                return callback(true, "데이터 가져옴.", rows);
-            });
+                        connection.release();
+                        return resolved(rows);
+                    });
+                })
         });
     },
 
     deleteTeam : function(data) {
         return new Promise(function(resolved, rejected) {
-            resolved();
+            mysqlSetting.getPool()
+                .then(mysqlSetting.getConnection)
+                .then(function(connection) {
+                    var select = [data.team_id, data.access_token];
+                    // TODO if manager is not required then change sql query
+                    var sql = "DELETE FROM Team " +
+                        "WHERE team_id = ? " +
+                        "AND manager = (SELECT user_id FROM User WHERE access_token = ?) ";
+                    connection.query(sql, select, function (err, rows) {
+                        if (err) {
+                            var error = new Error("팀 삭제 실패");
+                            error.status = 500;
+                            console.error(err);
+                            return rejected(error);
+                        } else if (rows.affectedRows == 0) {
+                            var error = new Error("잘못된 접근");
+                            error.status = 204;
+                            console.error(err);
+                            return rejected(error);
+                        }
+                        connection.release();
+                        return resolved();
+                    });
+                });
         });
     },
+
     makeTeam : function(data) {
         return new Promise(function(resolved, rejected) {
             mysqlSetting.getPool()
@@ -264,14 +145,20 @@ var team_model = {
                 });
         });
     },
+
     getTeamInfo : function(data) {
         return new Promise(function(resolved, rejected) {
             mysqlSetting.getPool()
                 .then(mysqlSetting.getConnection)
                 .then(function(connection) {
                     var select = [data.team_id];
-                    var sql = "SELECT team_id, teamname, description, manager, start_date, end_date FROM Team " +
-                        "WHERE team_id = ? ";
+                    var sql = "SELECT team_id, teamname, description, manager, GROUP_CONCAT(TeamMember.team_user_id) AS party, start_date, end_date " +
+                        "FROM Team " +
+                        "INNER JOIN TeamMember " +
+                        "ON Team.team_id = TeamMember.member_team_id " +
+                        "WHERE team_id = ? " +
+                        "GROUP BY team_id ";
+
                     connection.query(sql, select, function (err, rows) {
                         if (err) {
                             var error = new Error("가져오기 실패");
@@ -284,27 +171,140 @@ var team_model = {
                             console.error("팀 정보 없음");
                             return rejected(error);
                         }
+                        rows.forEach(function(col) {
+                            col.party = JSON.parse("["+col.party+"]");
+                        });
                         connection.release();
                         return resolved(rows);
                     });
                 });
         });
     },
+
     editTeamInfo : function(data) {
         return new Promise(function(resolved, rejected) {
-            resolved();
+            mysqlSetting.getPool()
+                .then(mysqlSetting.getConnection)
+                .then(mysqlSetting.connBeginTransaction)
+                .then(function(connection) {
+                    return new Promise(function(resolved, rejected) {
+                        var insert = [data.teamname, data.description, data.access_token, data.start_date, data.end_date];
+                        var sql = "UPDATE Team SET " +
+                            "`teamname` = ?, " +
+                            "`description` = ?, " +
+                            "`start_date` = ?, " +
+                            "`end_date` = ? ";
+                        connection.query(sql, insert, function (err, rows) {
+                            if (err) {
+                                var error = new Error("팀 수정 실패");
+                                error.status = 500;
+                                console.error(err);
+                                return rejected(error);
+                            } else if(rows.affectedRows == 0) {
+                                var error = new Error("팀 수정 실패");
+                                error.status = 500;
+                                return rejected(error);
+                            }
+                            return resolved({connection: connection});
+                        });
+                    });
+                })
+                .then(function(context) {
+                    return new Promise(function(resolved, rejected) {
+                        var select = [data.team_id];
+                        var sql = "SELECT team_id, teamname, description, manager, start_date, end_date FROM Team " +
+                            "WHERE team_id = ? ";
+                        context.connection.query(sql, select, function (err, rows) {
+                            if (err) {
+                                var error = new Error("가져오기 실패");
+                                error.status = 500;
+                                console.error(err);
+                                return rejected(error);
+                            } else if (rows.length == 0) {
+                                var error = new Error("팀 정보 없음");
+                                error.status = 500;
+                                console.error("팀 정보 없음");
+                                return rejected(error);
+                            }
+                            return resolved({connection: context.connection, result: rows[0]});
+                        });
+                    });
+                })
+                .then(mysqlSetting.commitTransaction)
+                .then(function(data) {
+                    return resolved(data);
+                });
         });
     },
+
     getTeamCode : function(data) {
         return new Promise(function(resolved, rejected) {
-            resolved();
+            mysqlSetting.getPool()
+                .then(mysqlSetting.getConnection)
+                .then(function(connection) {
+                    var select = [data.team_id];
+                    var sql = "SELECT invite_code " +
+                        "FROM Invite " +
+                        "WHERE invite_team_id = ? ";
+
+                    connection.query(sql, select, function (err, rows) {
+                        if (err) {
+                            var error = new Error("가져오기 실패");
+                            error.status = 500;
+                            console.error(err);
+                            return rejected(error);
+                        } else if (rows.length == 0) {
+                            var error = new Error("팀 정보 없음");
+                            error.status = 9500;
+                            console.error("팀 정보 없음");
+                            return rejected(error);
+                        }
+
+                        connection.release();
+                        return resolved(rows[0]);
+                    });
+                });
         });
     },
+
+    makeTeamCode : function(data) {
+        return new Promise(function(resolved, rejected) {
+            mysqlSetting.getPool()
+                .then(mysqlSetting.getConnection)
+                .then(function(connection) {
+                    var insert = [data.team_id, data.invite_code, data.end_date, data.invite_code, data.end_date];
+                    var sql = "INSERT INTO Invite SET " +
+                        "invite_team_id = ?, " +
+                        "invite_code = ?," +
+                        "end_date = ? " +
+                        "ON DUPLICATE KEY UPDATE " +
+                        "invite_code = ?," +
+                        "end_date = ? ";
+
+                    connection.query(sql, insert, function (err, rows) {
+                        if (err) {
+                            var error = new Error("팀 코드 생성 실패");
+                            error.status = 500;
+                            console.error(err);
+                            return rejected(error);
+                        } else if(rows.affectedRows == 0) {
+                            var error = new Error("팀 코드 생성 실패");
+                            error.status = 500;
+                            return rejected(error);
+                        }
+
+                        connection.release();
+                        return resolved(data);
+                    });
+                });
+        });
+    },
+
     joinTeam : function(data) {
         return new Promise(function(resolved, rejected) {
             resolved();
         });
-    },
+    }
 };
 
 module.exports = team_model;

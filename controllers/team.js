@@ -29,8 +29,9 @@ module.exports = {
                 res.statusCode = 200;
                 res.json({
                     msg: '팀 목록',
-                    // TODO data : data
-                    data: [
+                    data: data
+                    // TODO data 안에 team_progress, section_progress 추가
+                    /*data: [
                         {
                             team_id: "10",
                             teamname: "nexters",
@@ -43,20 +44,8 @@ module.exports = {
                             },
                             start_date: "2016-07-01 14:04:00",
                             end_date: "2016-07-21 14:04:00"
-                        }, {
-                            team_id: "11",
-                            teamname: "nexters",
-                            description: "개발자, 디자이너 모임",
-                            party: [10, 11, 12, 13],
-                            team_progress: 10,
-                            section_progress: {
-                                "개발자": 20,
-                                "디자이너": 20
-                            },
-                            start_date: "2016-07-01 14:04:00",
-                            end_date: "2016-07-21 14:04:00"
                         }
-                    ]
+                    ]*/
                     // END TODO
                 });
             })
@@ -109,8 +98,9 @@ module.exports = {
             res.statusCode = 200;
             res.json({
                 msg: '팀 정보 수정 완료',
-                // TODO data : data
-                data: {
+                data: data
+                // TODO data 안에 team_progress, section_progress 추가
+                /*data: {
                     team_id: "10",
                     teamname: "nexters",
                     description: "개발자, 디자이너 모임",
@@ -122,7 +112,7 @@ module.exports = {
                     manager: "10101010",
                     start_date: "2016-07-01 14:04:00",
                     end_date: "2016-07-21 14:04:00"
-                }
+                }*/
                 // END TODO
             });
         })
@@ -140,8 +130,9 @@ module.exports = {
             res.statusCode = 200;
             res.json({
                 msg: '팀 상세 정보',
-                // TODO data : data
-                data: {
+                data: data
+                // TODO data 안에 team_logo, team_progress, section_progress 추가
+                /*data: {
                     team_id: "10",
                     teamname: "nexters",
                     description: "개발자, 디자이너 모임",
@@ -154,7 +145,7 @@ module.exports = {
                     },
                     start_date: "2016-07-01 14:04:00",
                     end_date: "2016-07-21 14:04:00"
-                }
+                }*/
                 // END TODO
             });
         })
@@ -162,20 +153,20 @@ module.exports = {
 },
 
     deleteTeam : function (req, res, next) {
-    var data = {
-        access_token: req.header('access-token'),
-        team_id: req.params.team_id
-    };
+        var data = {
+            access_token: req.header('access-token'),
+            team_id: req.params.team_id
+        };
 
-    teamModel.deleteTeam(data)
-        .then(function () {
-            res.statusCode = 200;
-            res.json({
-                msg: '팀 삭제 완료'
-            });
-        })
-        .catch(errorHandler);
-},
+        teamModel.deleteTeam(data)
+            .then(function () {
+                res.statusCode = 200;
+                res.json({
+                    msg: '팀 삭제 완료'
+                });
+            })
+            .catch(errorHandler);
+    },
 
     getTeamCode : function (req, res, next) {
         var data = {
@@ -183,14 +174,22 @@ module.exports = {
             team_id: req.params.team_id
         };
 
-        teamModel.getTeamCode(data)
+        var crypto = require('crypto');
+        var salt = Math.round((new Date().valueOf() * Math.random())) + "";
+        data.invite_code = crypto.createHash("md5").update(data.team_id + salt).digest("hex");
+        var set_date = new Date().setYear(new Date().getFullYear() + 1);
+        var cur_date = new Date(set_date).toISOString().split("T");
+        data.end_date = cur_date[0]+" "+cur_date[1].split(".")[0];
+
+        teamModel.makeTeamCode(data)
+            .then(teamModel.getTeamCode)
             .then(function (data) {
                 res.statusCode = 200;
                 res.json({
                     msg: '초대 URL',
                     // TODO data : data
                     data: {
-                        invite_url: "http://host.com/invite/1341343"
+                        invite_url: require('../credentials').host.api + '/invite/' + data.invite_code
                     }
                     // END TODO
                 });
@@ -199,27 +198,29 @@ module.exports = {
     },
 
     joinTeam : function (req, res, next) {
-    var data = {
-        access_token: req.header('access-token'),
-        invite_code: req.params.invite_code
-    };
+        var data = {
+            access_token: req.header('access-token'),
+            invite_code: req.params.invite_code
+        };
 
-    teamModel.joinTeam(data)
-        .then(function (data) {
-            // TODO change invite code data
-            if (require('../credentials').host.api + "/ABCDEFGHIJK_HASH_CODE" == data.invite_code) {
-                res.statusCode = 200;
-                res.json({
-                    msg: "가입 되었습니다."
+        teamModel.joinTeam(data)
+            .then(function (result) {
+                return new Promise(function(resolved, rejected) {
+                    // TODO change invite code data
+                    if ("ABCDEFGHIJK_HASH_CODE" == data.invite_code) {
+                        res.statusCode = 200;
+                        res.json({
+                            msg: "가입 되었습니다."
+                        });
+                    } else {
+                        res.json({
+                            msg: "잘못된 초대코드 입니다."
+                        });
+                    }
+                    // END TODO
                 });
-            } else {
-                res.json({
-                    msg: "잘못된 초대코드 입니다."
-                })
-            }
-            // END TODO
-        })
-        .catch(errorHandler);
-}
+            })
+            .catch(errorHandler);
+    }
 
 };
