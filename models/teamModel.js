@@ -200,7 +200,7 @@ var team_model = {
                 .then(mysqlSetting.connBeginTransaction)
                 .then(function(connection) {
                     return new Promise(function(resolved, rejected) {
-                        var insert = [data.teamname, data.description, data.access_token, data.start_date, data.end_date];
+                        var insert = [data.teamname, data.description, data.start_date, data.end_date];
                         var sql = "UPDATE Team SET " +
                             "`teamname` = ?, " +
                             "`description` = ?, " +
