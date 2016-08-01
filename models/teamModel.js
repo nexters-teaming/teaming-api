@@ -404,6 +404,40 @@ var team_model = {
                     return rejected(err);
                 });
         });
+    },
+
+    getTeamMemberById : function(data) {
+        return new Promise(function(resolved, rejected) {
+            mysqlSetting.getPool()
+                .then(mysqlSetting.getConnection)
+                .then(function(connection) {
+                    var select = [data.access_token, data.team_id];
+                    var sql = "SELECT team_user_id, member_team_id " +
+                        "FROM TeamMember " +
+                        "WHERE team_user_id = (SELECT user_id FROM User WHERE access_token = ?) " +
+                        "AND member_team_id = ? ";
+
+                    connection.query(sql, select, function (err, rows) {
+                        if (err) {
+                            var error = new Error("가져오기 실패");
+                            error.status = 500;
+                            console.error(err);
+                            return rejected(error);
+                        } else if (rows.length == 0) {
+                            var error = new Error("해당 멤버 아님");
+                            error.status = 500;
+                            console.error("해당 멤버 아님");
+                            return rejected(error);
+                        }
+
+                        connection.release();
+                        return resolved();
+                    });
+                })
+                .catch(function(err) {
+                    return rejected(err);
+                });
+        });
     }
 };
 

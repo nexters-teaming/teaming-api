@@ -43,7 +43,7 @@ module.exports = {
                     // END TODO
                 });
             })
-            .catch(errorHandler);
+            .catch(next);
     },
 
     makeSection: function (req, res, next) {
@@ -51,24 +51,31 @@ module.exports = {
             access_token: req.header('access-token'),
             team_id: req.params.team_id,
             section_title: req.body.section_title,
-            edit_date: req.body.edit_date
+            end_date: req.body.end_date
         };
 
-        sectionModel.makeSection(data)
+        require('../models/teamModel').getTeamMemberById(data)
+            .then(function() {
+                return new Promise(function(resolved) {
+                    resolved(data);
+                });
+            })
+            .then(sectionModel.makeSection)
             .then(function (data) {
                 res.statusCode = 200;
                 res.json({
                     msg: '섹션 생성 완료',
+                    data: data
                     // TODO data : data
-                    data: {
+                    /*data: {
                         section_id: "10",
                         section_title: "개발팀",
                         edit_date: "2016-07-27 06:11:00"
-                    }
+                    }*/
                     // END TODO
                 });
             })
-            .catch(errorHandler);
+            .catch(next);
     },
 
     editSectionInfo: function (req, res, next) {
