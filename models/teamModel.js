@@ -36,6 +36,9 @@ var team_model = {
                         return resolved(rows);
                     });
                 })
+                .catch(function(err) {
+                    return rejected(err);
+                });
         });
     },
 
@@ -64,6 +67,9 @@ var team_model = {
                         connection.release();
                         return resolved();
                     });
+                })
+                .catch(function(err) {
+                    return rejected(err);
                 });
         });
     },
@@ -142,6 +148,9 @@ var team_model = {
                 .then(mysqlSetting.commitTransaction)
                 .then(function(data) {
                     return resolved(data);
+                })
+                .catch(function(err) {
+                    return rejected(err);
                 });
         });
     },
@@ -177,6 +186,9 @@ var team_model = {
                         connection.release();
                         return resolved(rows);
                     });
+                })
+                .catch(function(err) {
+                    return rejected(err);
                 });
         });
     },
@@ -233,6 +245,9 @@ var team_model = {
                 .then(mysqlSetting.commitTransaction)
                 .then(function(data) {
                     return resolved(data);
+                })
+                .catch(function(err) {
+                    return rejected(err);
                 });
         });
     },
@@ -263,6 +278,9 @@ var team_model = {
                         connection.release();
                         return resolved(rows[0]);
                     });
+                })
+                .catch(function(err) {
+                    return rejected(err);
                 });
         });
     },
@@ -296,13 +314,95 @@ var team_model = {
                         connection.release();
                         return resolved(data);
                     });
+                })
+                .catch(function(err) {
+                    return rejected(err);
                 });
         });
     },
 
     joinTeam : function(data) {
         return new Promise(function(resolved, rejected) {
-            resolved();
+            mysqlSetting.getPool()
+                .then(mysqlSetting.getConnection)
+                .then(mysqlSetting.connBeginTransaction)
+                .then(function(connection) {
+                    return new Promise(function(resolved, rejected) {
+                        var select = [data.invite_code];
+                        var sql = "SELECT invite_team_id " +
+                            "FROM Invite " +
+                            "WHERE invite_code = ? ";
+
+                        connection.query(sql, select, function (err, rows) {
+                            if (err) {
+                                var error = new Error("팀 가져오기 실패");
+                                error.status = 500;
+                                console.error(err);
+                                return rejected(error);
+                            } else if (rows.length == 0) {
+                                var error = new Error("잘못된 코드입니다.");
+                                error.status = 9400;
+                                console.error("잘못된 코드입니다.");
+                                return rejected(error);
+                            }
+
+                            return resolved({ connection: connection, team_id: rows[0].invite_team_id });
+                        });
+                    });
+                })
+                .then(function(context) {
+                    return new Promise(function(resolved, rejected) {
+                        var select = [data.access_token, context.team_id];
+                        var sql = "SELECT team_user_id " +
+                            "FROM TeamMember " +
+                            "WHERE team_user_id = (SELECT user_id FROM User WHERE access_token = ?) " +
+                            "AND member_team_id = ?";
+
+                        context.connection.query(sql, select, function (err, rows) {
+                            if (err) {
+                                var error = new Error("팀원 가져오기 실패");
+                                error.status = 400;
+                                console.error(err);
+                                return rejected(error);
+                            }
+
+                            if (rows.length == 0) {
+                                return resolved(context);
+                            } else {
+                                var error = new Error("이미 가입중인 팀 입니다.");
+                                error.status = 400;
+                                console.error(err);
+                                return rejected(error);
+                            }
+                        });
+                    });
+                })
+                .then(function(context) {
+                    return new Promise(function(resolved, rejected) {
+                        var insert = [data.access_token, context.team_id];
+                        var sql = "INSERT INTO TeamMember SET " +
+                            "team_user_id = (SELECT user_id FROM User WHERE access_token = ?), " +
+                            "member_team_id = ? ";
+
+                        context.connection.query(sql, insert, function (err, rows) {
+                            if (err) {
+                                var error = new Error("팀 가입 실패");
+                                error.status = 500;
+                                console.error(err);
+                                return rejected(error);
+                            }
+
+                            return resolved(context);
+                        });
+                    });
+                })
+                .then(mysqlSetting.commitTransaction)
+                .then(function() {
+                    return resolved();
+                })
+                .catch(function(err) {
+                    return rejected(err);
+                });
         });
     }
 };

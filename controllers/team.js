@@ -3,7 +3,7 @@
  */
 var teamModel = require('../models/teamModel');
 var Promise = require("bluebird");
-var errorHandler = require('./errorHandler');
+//var errorHandler = require('./errorHandler');
 
 /**
  *
@@ -49,7 +49,7 @@ module.exports = {
                     // END TODO
                 });
             })
-            .catch(errorHandler);
+            .catch(next);
     },
 
     makeTeam : function (req, res, next) {
@@ -78,7 +78,7 @@ module.exports = {
                  }*/
             });
         })
-        .catch(errorHandler);
+        .catch(next);
 },
 
     editTeamInfo : function (req, res, next) {
@@ -116,7 +116,7 @@ module.exports = {
                 // END TODO
             });
         })
-        .catch(errorHandler);
+        .catch(next);
 },
 
     getTeamInfo : function (req, res, next) {
@@ -149,7 +149,7 @@ module.exports = {
                 // END TODO
             });
         })
-        .catch(errorHandler);
+        .catch(next);
 },
 
     deleteTeam : function (req, res, next) {
@@ -165,10 +165,10 @@ module.exports = {
                     msg: '팀 삭제 완료'
                 });
             })
-            .catch(errorHandler);
+            .catch(next);
     },
 
-    getTeamCode : function (req, res, next) {
+    makeTeamCode : function (req, res, next) {
         var data = {
             access_token: req.header('access-token'),
             team_id: req.params.team_id
@@ -182,7 +182,6 @@ module.exports = {
         data.end_date = cur_date[0]+" "+cur_date[1].split(".")[0];
 
         teamModel.makeTeamCode(data)
-            .then(teamModel.getTeamCode)
             .then(function (data) {
                 res.statusCode = 200;
                 res.json({
@@ -194,7 +193,28 @@ module.exports = {
                     // END TODO
                 });
             })
-            .catch(errorHandler);
+            .catch(next);
+    },
+
+    getTeamCode : function (req, res, next) {
+        var data = {
+            access_token: req.header('access-token'),
+            team_id: req.params.team_id
+        };
+
+        teamModel.getTeamCode(data)
+            .then(function (data) {
+                res.statusCode = 200;
+                res.json({
+                    msg: '초대 URL',
+                    // TODO data : data
+                    data: {
+                        invite_url: require('../credentials').host.api + '/invite/' + data.invite_code
+                    }
+                    // END TODO
+                });
+            })
+            .catch(next);
     },
 
     joinTeam : function (req, res, next) {
@@ -204,23 +224,13 @@ module.exports = {
         };
 
         teamModel.joinTeam(data)
-            .then(function (result) {
-                return new Promise(function(resolved, rejected) {
-                    // TODO change invite code data
-                    if ("ABCDEFGHIJK_HASH_CODE" == data.invite_code) {
-                        res.statusCode = 200;
-                        res.json({
-                            msg: "가입 되었습니다."
-                        });
-                    } else {
-                        res.json({
-                            msg: "잘못된 초대코드 입니다."
-                        });
-                    }
-                    // END TODO
+            .then(function () {
+                res.statusCode = 200;
+                res.json({
+                    msg: "가입 되었습니다."
                 });
             })
-            .catch(errorHandler);
+            .catch(next);
     }
 
 };

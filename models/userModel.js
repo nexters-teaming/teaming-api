@@ -32,6 +32,9 @@ var user_model = {
                         connection.release();
                         return resolved();
                     });
+                })
+                .catch(function(err) {
+                    return rejected(err);
                 });
         });
     },
@@ -59,6 +62,9 @@ var user_model = {
                         connection.release();
                         return resolved();
                     });
+                })
+                .catch(function(err) {
+                    return rejected(err);
                 });
         });
     },
@@ -85,6 +91,9 @@ var user_model = {
                         connection.release();
                         return resolved(rows);
                     });
+                })
+                .catch(function(err) {
+                    return rejected(err);
                 });
         });
     },
@@ -112,6 +121,9 @@ var user_model = {
                         connection.release();
                         return resolved(data);
                     });
+                })
+                .catch(function(err) {
+                    return rejected(err);
                 });
         });
     }

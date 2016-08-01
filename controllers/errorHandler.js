@@ -13,7 +13,7 @@ var errorHandler = function(err) {
     if (err) {
         var error;
         if (typeof err.message != 'undefined') {
-            error = new Error(msg);
+            error = new Error(err.message);
             error.status = err;
         } else {
             error = new Error("");

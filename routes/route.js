@@ -20,6 +20,7 @@ module.exports = function(){
     router.put('/team/:team_id', api.team.editTeamInfo);            // 팀 정보 변경
     router.delete('/team/:team_id', api.team.deleteTeam);           // 팀 삭제
     router.get('/team/:team_id/invitation', api.team.getTeamCode);  // 팀 초대코드
+    router.post('/team/:team_id/invitation', api.team.makeTeamCode);  // 팀 초대코드 생성
     router.get('/invite/:invite_code', api.team.joinTeam);           // 초대코드로 팀 가입
 
     // Section controller
