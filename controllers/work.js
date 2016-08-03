@@ -2,6 +2,7 @@
  * Created by YS on 2016-07-28.
  */
 var workModel = require('../models/workModel');
+var sectionModel = require('../models/sectionModel');
 var Promise = require("bluebird");
 var errorHandler = require('./errorHandler');
 
@@ -25,51 +26,21 @@ module.exports = {
             section_id: req.params.section_id
         };
 
-        workModel.getWorkList(data)
+        sectionModel.getSectionMemberById(data)
+            .then(function() {
+                return new Promise(function(resolved) {
+                    return resolved(data);
+                })
+            })
+            .then(workModel.getWorkList)
             .then(function (data) {
                 res.statusCode = 200;
                 res.json({
                     msg: '할일 목록',
-                    // TODO data : data
-                    data: [{
-                        work_id: "10",
-                        work_process: 1,
-                        work_title: "B시안 코딩",
-                        work_desc: "B시안은 이러쿵 저러쿵 합니다.",
-                        worker: [{
-                            user_id: 10,
-                            username: "테스터1",
-                            status: 1
-                        }, {
-                            user_id: 11,
-                            username: "테스터2",
-                            status: 0
-                        }],
-                        start_date: "2016-07-01 14:04:00",
-                        end_date: "2016-07-21 14:04:00",
-                        edit_date: "2016-07-02 14:04:00"
-                    }, {
-                        work_id: "10",
-                        work_process: 1,
-                        work_title: "B시안 코딩",
-                        work_desc: "B시안은 이러쿵 저러쿵 합니다.",
-                        worker: [{
-                            user_id: 10,
-                            username: "테스터1",
-                            status: 1
-                        }, {
-                            user_id: 11,
-                            username: "테스터2",
-                            status: 0
-                        }],
-                        start_date: "2016-07-01 14:04:00",
-                        end_date: "2016-07-21 14:04:00",
-                        edit_date: "2016-07-02 14:04:00"
-                    }]
-                    // END TODO
+                    data: data
                 });
             })
-            .catch(errorHandler);
+            .catch(next);
     },
 
     makeWork: function (req, res, next) {
@@ -84,34 +55,37 @@ module.exports = {
             end_date: req.body.end_date
         };
 
-        workModel.makeWork(data)
+        sectionModel.getSectionMemberById(data)
+            .then(function() {
+                return new Promise(function(resolved) {
+                    return resolved(data);
+                })
+            })
+            .then(workModel.makeWork)
+            .then(function(tempData) {
+                return new Promise(function(resolved) {
+                    // worker를 처음부터 등록하는 경우
+                    if (typeof data.worker != 'undefined') {
+                        // 별도로 joinWork 실행
+                        workModel.joinWork({access_token: data.access_token, work_id: tempData.work_id})
+                            .then(function() {
+                                return resolved(tempData);
+                            })
+                            .catch(next)
+                    } else {
+                        return resolved(tempData);
+                    }
+                });
+            })
+            .then(workModel.getWorkInfo)
             .then(function (data) {
                 res.statusCode = 200;
                 res.json({
                     msg: '할일 생성 완료',
-                    // TODO data : data
-                    data: {
-                        work_id: "10",
-                        work_process: 0,
-                        work_title: "B시안 코딩",
-                        work_desc: "B시안은 이러쿵 저러쿵 합니다.",
-                        worker: [{
-                            user_id: 10,
-                            username: "테스터1",
-                            status: 1
-                        }, {
-                            user_id: 11,
-                            username: "테스터2",
-                            status: 0
-                        }],
-                        start_date: "2016-07-01 14:04:00",
-                        end_date: "2016-07-21 14:04:00",
-                        edit_date: "2016-07-02 14:04:00"
-                    }
-                    // END TODO
+                    data: data
                 });
             })
-            .catch(errorHandler);
+            .catch(next);
     },
 
     editWorkInfo: function (req, res, next) {
@@ -127,34 +101,22 @@ module.exports = {
             end_date: req.body.end_date
         };
 
-        workModel.editWorkInfo(data)
+        sectionModel.getSectionMemberById(data)
+            .then(function() {
+                return new Promise(function(resolved) {
+                    return resolved(data);
+                })
+            })
+            .then(workModel.editWorkInfo)
+            .then(workModel.getWorkInfo)
             .then(function (data) {
                 res.statusCode = 200;
                 res.json({
                     msg: '할일 수정 완료',
-                    // TODO data : data
-                    data: {
-                        work_id: "10",
-                        work_process: 0,
-                        work_title: "B시안 코딩",
-                        work_desc: "B시안은 이러쿵 저러쿵 합니다.",
-                        worker: [{
-                            user_id: 10,
-                            username: "테스터1",
-                            status: 1
-                        }, {
-                            user_id: 11,
-                            username: "테스터2",
-                            status: 0
-                        }],
-                        start_date: "2016-07-01 14:04:00",
-                        end_date: "2016-07-21 14:04:00",
-                        edit_date: "2016-07-02 14:04:00"
-                    }
-                    // END TODO
+                    data: data
                 });
             })
-            .catch(errorHandler);
+            .catch(next);
     },
 
     getWorkInfo: function (req, res, next) {
@@ -165,34 +127,21 @@ module.exports = {
             work_id: req.params.work_id
         };
 
-        workModel.getWorkInfo(data)
+        sectionModel.getSectionMemberById(data)
+            .then(function() {
+                return new Promise(function(resolved) {
+                    return resolved(data);
+                })
+            })
+            .then(workModel.getWorkInfo)
             .then(function (data) {
                 res.statusCode = 200;
                 res.json({
                     msg: '할일 상세',
-                    // TODO data : data
-                    data: {
-                        work_id: "10",
-                        work_process: 1,
-                        work_title: "B시안 코딩",
-                        work_desc: "B시안은 이러쿵 저러쿵 합니다.",
-                        worker: [{
-                            user_id: 10,
-                            username: "테스터1",
-                            status: 1
-                        }, {
-                            user_id: 11,
-                            username: "테스터2",
-                            status: 0
-                        }],
-                        start_date: "2016-07-01 14:04:00",
-                        end_date: "2016-07-21 14:04:00",
-                        edit_date: "2016-07-02 14:04:00"
-                    }
-                    // END TODO
+                    data: data
                 });
             })
-            .catch(errorHandler);
+            .catch(next);
     },
 
     deleteWork: function (req, res, next) {
@@ -221,24 +170,69 @@ module.exports = {
             work_id: req.params.work_id
         };
 
-        workModel.joinWork(data)
+        sectionModel.getSectionMemberById(data)
+            .then(function() {
+                return new Promise(function(resolved) {
+                    return resolved(data);
+                })
+            })
+            .then(workModel.checkWorkMemberById)
+            .then(function() {
+                return new Promise(function(resolved) {
+                    resolved(data);
+                })
+            })
+            .then(workModel.joinWork)
+            .then(function() {
+                return new Promise(function(resolved) {
+                    resolved(data);
+                })
+            })
+            .then(workModel.getWorker)
             .then(function (data) {
                 res.statusCode = 200;
                 res.json({
                     msg: "가입 되었습니다.",
-                    // TODO data : data
-                    data: [{
-                        user_id: 10,
-                        username: "테스터1",
-                        status: 1
-                    }, {
-                        user_id: 11,
-                        username: "테스터2",
-                        status: 0
-                    }]
-                    // END TODO
+                    data: data
                 });
             })
-            .catch(errorHandler);
+            .catch(next);
+    },
+
+    exitWork: function (req, res, next) {
+        var data = {
+            access_token: req.header('access-token'),
+            team_id: req.params.team_id,
+            section_id: req.params.section_id,
+            work_id: req.params.work_id
+        };
+
+        sectionModel.getSectionMemberById(data)
+            .then(function() {
+                return new Promise(function(resolved) {
+                    return resolved(data);
+                })
+            })
+            .then(workModel.getWorkMemberById)
+            .then(function() {
+                return new Promise(function(resolved) {
+                    resolved(data);
+                })
+            })
+            .then(workModel.exitWork)
+            .then(function() {
+                return new Promise(function(resolved) {
+                    resolved(data);
+                })
+            })
+            .then(workModel.getWorker)
+            .then(function (data) {
+                res.statusCode = 200;
+                res.json({
+                    msg: "탈퇴 되었습니다.",
+                    data: data
+                });
+            })
+            .catch(next);
     }
-}
+};

@@ -34,14 +34,14 @@ var getConnection = function(pool) {
                 return rejected(error);
             }
 
-            return resolved(connection);
+            return resolved({ connection: connection });
         });
     });
 };
 
-var connBeginTransaction = function(connection) {
+var connBeginTransaction = function(context) {
     return new Promise(function(resolved, rejected) {
-        connection.beginTransaction(function (err) {
+        context.connection.beginTransaction(function (err) {
             if (err) {
                 var error = new Error("에러 발생");
                 error.status = 500;
@@ -49,14 +49,14 @@ var connBeginTransaction = function(connection) {
                 return rejected(error);
             }
 
-            return resolved(connection);
+            return resolved(context);
         });
     });
 };
 
-var commitTransaction = function(data) {
+var commitTransaction = function(context) {
     return new Promise(function(resolved, rejected) {
-        data.connection.commit(function (err) {
+        context.connection.commit(function (err) {
             if (err) {
                 var error = new Error("에러 발생");
                 error.status = 500;
@@ -64,7 +64,7 @@ var commitTransaction = function(data) {
                 return rejected(error);
             }
 
-            return resolved(data.result);
+            return resolved(context.result);
         });
     });
 };

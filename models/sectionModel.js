@@ -11,7 +11,7 @@ var section_model = {
         return new Promise(function(resolved, rejected) {
             mysqlSetting.getPool()
                 .then(mysqlSetting.getConnection)
-                .then(function(connection) {
+                .then(function(context) {
                     var select = [data.team_id];
                     var sql = "SELECT section_id, section_title, edit_date, GROUP_CONCAT(SectionMember.section_user_id) AS party " +
                         "FROM Section " +
@@ -19,7 +19,7 @@ var section_model = {
                         "ON Section.section_id = SectionMember.member_section_id " +
                         "WHERE Section.section_team_id = ? " +
                         "GROUP BY section_id LIMIT 20 ";
-                    connection.query(sql, select, function (err, rows) {
+                    context.connection.query(sql, select, function (err, rows) {
                         if (err) {
                             var error = new Error("섹션 목록 가져오기 실패");
                             error.status = 500;
@@ -31,7 +31,7 @@ var section_model = {
                             if (col.party == null) col.party = [];
                             else col.party = JSON.parse("["+col.party+"]");
                         });
-                        connection.release();
+                        context.connection.release();
                         return resolved(rows);
                     });
                 })
@@ -46,7 +46,7 @@ var section_model = {
             mysqlSetting.getPool()
                 .then(mysqlSetting.getConnection)
                 .then(mysqlSetting.connBeginTransaction)
-                .then(function(connection) {
+                .then(function(context) {
                     return new Promise(function(resolved, rejected) {
                         var insert = [data.team_id, data.section_title, data.end_date];
                         var sql = "INSERT INTO Section SET " +
@@ -54,7 +54,7 @@ var section_model = {
                             "section_title = ?, " +
                             "end_date = ?, " +
                             "edit_date = NOW() ";
-                        connection.query(sql, insert, function (err, rows) {
+                        context.connection.query(sql, insert, function (err, rows) {
                             if (err) {
                                 var error = new Error("섹션 생성 실패");
                                 error.status = 500;
@@ -62,7 +62,8 @@ var section_model = {
                                 return rejected(error);
                             }
 
-                            return resolved({ connection: connection, section_id: rows.insertId });
+                            context.section_id = rows.insertId;
+                            return resolved(context);
                         });
                     });
                 })
@@ -80,7 +81,8 @@ var section_model = {
                                 return rejected(error);
                             }
 
-                            return resolved({ connection: context.connection, result:rows });
+                            context.result = rows;
+                            return resolved(context);
                         });
                     });
                 })
@@ -98,20 +100,21 @@ var section_model = {
         return new Promise(function(resolved, rejected) {
             mysqlSetting.getPool()
                 .then(mysqlSetting.getConnection)
-                .then(function(connection) {
+                .then(function(context) {
                     return new Promise(function(resolved, rejected) {
                         var select = [data.section_id];
                         var sql = "SELECT section_id, section_title " +
                             "FROM Section " +
                             "WHERE section_id = ?";
-                        connection.query(sql, select, function (err, rows) {
+                        context.connection.query(sql, select, function (err, rows) {
                             if (err) {
                                 var error = new Error("섹션 정보 가져오기 실패");
                                 error.status = 500;
                                 console.error(err);
                                 return rejected(error);
                             }
-                            return resolved({ connection: connection, section_info: rows[0]});
+                            context.section_info = rows[0];
+                            return resolved(context);
                         });
                     });
                 })
@@ -145,14 +148,14 @@ var section_model = {
         return new Promise(function(resolved, rejected) {
             mysqlSetting.getPool()
                 .then(mysqlSetting.getConnection)
-                .then(function(connection) {
+                .then(function(context) {
                     var select = [data.access_token, data.section_id];
                     var sql = "SELECT section_user_id, member_section_id " +
                         "FROM SectionMember " +
                         "WHERE section_user_id = (SELECT user_id FROM User WHERE access_token = ?) " +
                         "AND member_section_id = ? ";
 
-                    connection.query(sql, select, function (err, rows) {
+                    context.connection.query(sql, select, function (err, rows) {
                         if (err) {
                             var error = new Error("가져오기 실패");
                             error.status = 500;
@@ -165,7 +168,7 @@ var section_model = {
                             return rejected(error);
                         }
 
-                        connection.release();
+                        context.connection.release();
                         return resolved();
                     });
                 })
@@ -179,14 +182,14 @@ var section_model = {
         return new Promise(function(resolved, rejected) {
             mysqlSetting.getPool()
                 .then(mysqlSetting.getConnection)
-                .then(function(connection) {
+                .then(function(context) {
                     var select = [data.access_token, data.section_id];
                     var sql = "SELECT section_user_id, member_section_id " +
                         "FROM SectionMember " +
                         "WHERE section_user_id = (SELECT user_id FROM User WHERE access_token = ?) " +
                         "AND member_section_id = ? ";
 
-                    connection.query(sql, select, function (err, rows) {
+                    context.connection.query(sql, select, function (err, rows) {
                         if (err) {
                             var error = new Error("가져오기 실패");
                             error.status = 500;
@@ -199,7 +202,7 @@ var section_model = {
                             return rejected(error);
                         }
 
-                        connection.release();
+                        context.connection.release();
                         return resolved();
                     });
                 })
@@ -213,12 +216,12 @@ var section_model = {
         return new Promise(function(resolved, rejected) {
             mysqlSetting.getPool()
                 .then(mysqlSetting.getConnection)
-                .then(function(connection) {
+                .then(function(context) {
                     var insert = [data.access_token, data.section_id];
                     var sql = "INSERT INTO SectionMember SET " +
                         "section_user_id = (SELECT user_id FROM User WHERE access_token = ?), " +
                         "member_section_id = ?";
-                    connection.query(sql, insert, function (err, rows) {
+                    context.connection.query(sql, insert, function (err, rows) {
                         if (err) {
                             var error = new Error("섹션 가입하기 실패");
                             error.status = 500;
@@ -226,7 +229,7 @@ var section_model = {
                             return rejected(error);
                         }
 
-                        connection.release();
+                        context.connection.release();
                         return resolved();
                     });
                 })
@@ -241,7 +244,7 @@ var section_model = {
             mysqlSetting.getPool()
                 .then(mysqlSetting.getConnection)
                 .then(mysqlSetting.connBeginTransaction)
-                .then(function(connection) {
+                .then(function(context) {
                     return new Promise(function(resolved, rejected) {
                         var insert = [data.team_id, data.section_title, data.end_date, data.section_id];
                         var sql = "UPDATE Section SET " +
@@ -250,7 +253,7 @@ var section_model = {
                             "end_date = ?, " +
                             "edit_date = NOW() " +
                             "WHERE section_id = ?";
-                        connection.query(sql, insert, function (err, rows) {
+                        context.connection.query(sql, insert, function (err, rows) {
                             if (err) {
                                 var error = new Error("섹션 변경 실패");
                                 error.status = 500;
@@ -262,7 +265,8 @@ var section_model = {
                                 return rejected(error);
                             }
 
-                            return resolved({ connection: connection, section_id: data.section_id });
+                            context.section_id = data.section_id;
+                            return resolved(context);
                         });
                     });
                 })
@@ -280,7 +284,8 @@ var section_model = {
                                 return rejected(error);
                             }
 
-                            return resolved({ connection: context.connection, result:rows });
+                            context.result = rows;
+                            return resolved(context);
                         });
                     });
                 })
@@ -298,11 +303,11 @@ var section_model = {
         return new Promise(function(resolved, rejected) {
             mysqlSetting.getPool()
                 .then(mysqlSetting.getConnection)
-                .then(function(connection) {
+                .then(function(context) {
                     var select = [data.section_id];
                     var sql = "DELETE FROM Section " +
                         "WHERE section_id = ? ";
-                    connection.query(sql, select, function (err, rows) {
+                    context.connection.query(sql, select, function (err, rows) {
                         if (err) {
                             var error = new Error("섹션 삭제하기 실패");
                             error.status = 500;
@@ -310,7 +315,7 @@ var section_model = {
                             return rejected(error);
                         }
 
-                        connection.release();
+                        context.connection.release();
                         return resolved();
                     });
                 })
@@ -324,14 +329,14 @@ var section_model = {
         return new Promise(function(resolved, rejected) {
             mysqlSetting.getPool()
                 .then(mysqlSetting.getConnection)
-                .then(function(connection) {
+                .then(function(context) {
                     var select = [data.section_id];
                     var sql = "SELECT user_id, username " +
                         "FROM User " +
                         "WHERE user_id IN (SELECT section_user_id " +
                         "FROM SectionMember " +
                         "WHERE member_section_id = ?)";
-                    connection.query(sql, select, function (err, rows) {
+                    context.connection.query(sql, select, function (err, rows) {
                         if (err) {
                             var error = new Error("섹션 변경 실패");
                             error.status = 500;
@@ -339,7 +344,7 @@ var section_model = {
                             return rejected(error);
                         }
 
-                        connection.release();
+                        context.connection.release();
                         return resolved(rows);
                     });
                 })

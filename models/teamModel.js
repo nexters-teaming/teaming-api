@@ -10,7 +10,7 @@ var team_model = {
         return new Promise(function(resolved, rejected) {
             mysqlSetting.getPool()
                 .then(mysqlSetting.getConnection)
-                .then(function(connection) {
+                .then(function(context) {
                     var select = [];
                     var sql = "SELECT team_id, teamname, description, GROUP_CONCAT(TeamMember.team_user_id) AS party, start_date, end_date " +
                         "FROM Team " +
@@ -18,7 +18,7 @@ var team_model = {
                         "ON Team.team_id = TeamMember.member_team_id ";
 
                     sql += "GROUP BY team_id LIMIT 20 ";
-                    connection.query(sql, select, function (err, rows) {
+                    context.connection.query(sql, select, function (err, rows) {
                         if (err) {
                             var error = new Error("팀 목록 가져오기 실패");
                             error.status = 500;
@@ -32,7 +32,7 @@ var team_model = {
                         rows.forEach(function(col) {
                             col.party = JSON.parse("["+col.party+"]");
                         });
-                        connection.release();
+                        context.connection.release();
                         return resolved(rows);
                     });
                 })
@@ -46,13 +46,13 @@ var team_model = {
         return new Promise(function(resolved, rejected) {
             mysqlSetting.getPool()
                 .then(mysqlSetting.getConnection)
-                .then(function(connection) {
+                .then(function(context) {
                     var select = [data.team_id, data.access_token];
                     // TODO if manager is not required then change sql query
                     var sql = "DELETE FROM Team " +
                         "WHERE team_id = ? " +
                         "AND manager = (SELECT user_id FROM User WHERE access_token = ?) ";
-                    connection.query(sql, select, function (err, rows) {
+                    context.connection.query(sql, select, function (err, rows) {
                         if (err) {
                             var error = new Error("팀 삭제 실패");
                             error.status = 500;
@@ -64,7 +64,7 @@ var team_model = {
                             console.error(err);
                             return rejected(error);
                         }
-                        connection.release();
+                        context.connection.release();
                         return resolved();
                     });
                 })
@@ -79,7 +79,7 @@ var team_model = {
             mysqlSetting.getPool()
                 .then(mysqlSetting.getConnection)
                 .then(mysqlSetting.connBeginTransaction)
-                .then(function(connection) {
+                .then(function(context) {
                     return new Promise(function(resolved, rejected) {
                         var insert = [data.teamname, data.description, data.access_token, data.start_date, data.end_date];
                         var sql = "INSERT INTO Team SET " +
@@ -88,7 +88,7 @@ var team_model = {
                             "`manager` = (SELECT user_id FROM User WHERE access_token = ?), " +
                             "`start_date` = ?, " +
                             "`end_date` = ? ";
-                        connection.query(sql, insert, function (err, rows) {
+                        context.connection.query(sql, insert, function (err, rows) {
                             if (err) {
                                 var error = new Error("팀 생성 실패");
                                 error.status = 500;
@@ -99,7 +99,8 @@ var team_model = {
                                 error.status = 500;
                                 return rejected(error);
                             }
-                            return resolved({connection: connection, team_id: rows.insertId});
+                            context.team_id = rows.insertId;
+                            return resolved(context);
                         });
                     });
                 })
@@ -120,7 +121,8 @@ var team_model = {
                                 console.error("팀 정보 없음");
                                 return rejected(error);
                             }
-                            return resolved({connection: context.connection, team_info: rows[0]});
+                            context.team_info = rows[0];
+                            return resolved(context);
                         });
                     });
                 })
@@ -141,7 +143,8 @@ var team_model = {
                                 error.status = 500;
                                 return rejected(error);
                             }
-                            return resolved({connection: context.connection, result: context.team_info});
+                            context.result = context.team_info;
+                            return resolved(context);
                         });
                     });
                 })
@@ -159,7 +162,7 @@ var team_model = {
         return new Promise(function(resolved, rejected) {
             mysqlSetting.getPool()
                 .then(mysqlSetting.getConnection)
-                .then(function(connection) {
+                .then(function(context) {
                     var select = [data.team_id];
                     var sql = "SELECT team_id, teamname, description, manager, GROUP_CONCAT(TeamMember.team_user_id) AS party, start_date, end_date " +
                         "FROM Team " +
@@ -168,7 +171,7 @@ var team_model = {
                         "WHERE team_id = ? " +
                         "GROUP BY team_id ";
 
-                    connection.query(sql, select, function (err, rows) {
+                    context.connection.query(sql, select, function (err, rows) {
                         if (err) {
                             var error = new Error("가져오기 실패");
                             error.status = 500;
@@ -183,7 +186,7 @@ var team_model = {
                         rows.forEach(function(col) {
                             col.party = JSON.parse("["+col.party+"]");
                         });
-                        connection.release();
+                        context.connection.release();
                         return resolved(rows);
                     });
                 })
@@ -198,7 +201,7 @@ var team_model = {
             mysqlSetting.getPool()
                 .then(mysqlSetting.getConnection)
                 .then(mysqlSetting.connBeginTransaction)
-                .then(function(connection) {
+                .then(function(context) {
                     return new Promise(function(resolved, rejected) {
                         var insert = [data.teamname, data.description, data.start_date, data.end_date];
                         var sql = "UPDATE Team SET " +
@@ -206,7 +209,7 @@ var team_model = {
                             "`description` = ?, " +
                             "`start_date` = ?, " +
                             "`end_date` = ? ";
-                        connection.query(sql, insert, function (err, rows) {
+                        context.connection.query(sql, insert, function (err, rows) {
                             if (err) {
                                 var error = new Error("팀 수정 실패");
                                 error.status = 500;
@@ -217,7 +220,7 @@ var team_model = {
                                 error.status = 500;
                                 return rejected(error);
                             }
-                            return resolved({connection: connection});
+                            return resolved(context);
                         });
                     });
                 })
@@ -238,7 +241,8 @@ var team_model = {
                                 console.error("팀 정보 없음");
                                 return rejected(error);
                             }
-                            return resolved({connection: context.connection, result: rows[0]});
+                            context.result = rows[0]
+                            return resolved(context);
                         });
                     });
                 })
@@ -256,13 +260,13 @@ var team_model = {
         return new Promise(function(resolved, rejected) {
             mysqlSetting.getPool()
                 .then(mysqlSetting.getConnection)
-                .then(function(connection) {
+                .then(function(context) {
                     var select = [data.team_id];
                     var sql = "SELECT invite_code " +
                         "FROM Invite " +
                         "WHERE invite_team_id = ? ";
 
-                    connection.query(sql, select, function (err, rows) {
+                    context.connection.query(sql, select, function (err, rows) {
                         if (err) {
                             var error = new Error("가져오기 실패");
                             error.status = 500;
@@ -275,7 +279,7 @@ var team_model = {
                             return rejected(error);
                         }
 
-                        connection.release();
+                        context.connection.release();
                         return resolved(rows[0]);
                     });
                 })
@@ -289,7 +293,7 @@ var team_model = {
         return new Promise(function(resolved, rejected) {
             mysqlSetting.getPool()
                 .then(mysqlSetting.getConnection)
-                .then(function(connection) {
+                .then(function(context) {
                     var insert = [data.team_id, data.invite_code, data.end_date, data.invite_code, data.end_date];
                     var sql = "INSERT INTO Invite SET " +
                         "invite_team_id = ?, " +
@@ -299,7 +303,7 @@ var team_model = {
                         "invite_code = ?," +
                         "end_date = ? ";
 
-                    connection.query(sql, insert, function (err, rows) {
+                    context.connection.query(sql, insert, function (err, rows) {
                         if (err) {
                             var error = new Error("팀 코드 생성 실패");
                             error.status = 500;
@@ -311,7 +315,7 @@ var team_model = {
                             return rejected(error);
                         }
 
-                        connection.release();
+                        context.connection.release();
                         return resolved(data);
                     });
                 })
@@ -326,14 +330,14 @@ var team_model = {
             mysqlSetting.getPool()
                 .then(mysqlSetting.getConnection)
                 .then(mysqlSetting.connBeginTransaction)
-                .then(function(connection) {
+                .then(function(context) {
                     return new Promise(function(resolved, rejected) {
                         var select = [data.invite_code];
                         var sql = "SELECT invite_team_id " +
                             "FROM Invite " +
                             "WHERE invite_code = ? ";
 
-                        connection.query(sql, select, function (err, rows) {
+                        context.connection.query(sql, select, function (err, rows) {
                             if (err) {
                                 var error = new Error("팀 가져오기 실패");
                                 error.status = 500;
@@ -346,7 +350,8 @@ var team_model = {
                                 return rejected(error);
                             }
 
-                            return resolved({ connection: connection, team_id: rows[0].invite_team_id });
+                            context.team_id = rows[0].invite_team_id;
+                            return resolved(context);
                         });
                     });
                 })
@@ -410,14 +415,14 @@ var team_model = {
         return new Promise(function(resolved, rejected) {
             mysqlSetting.getPool()
                 .then(mysqlSetting.getConnection)
-                .then(function(connection) {
+                .then(function(context) {
                     var select = [data.access_token, data.team_id];
                     var sql = "SELECT team_user_id, member_team_id " +
                         "FROM TeamMember " +
                         "WHERE team_user_id = (SELECT user_id FROM User WHERE access_token = ?) " +
                         "AND member_team_id = ? ";
 
-                    connection.query(sql, select, function (err, rows) {
+                    context.connection.query(sql, select, function (err, rows) {
                         if (err) {
                             var error = new Error("가져오기 실패");
                             error.status = 500;
@@ -430,7 +435,7 @@ var team_model = {
                             return rejected(error);
                         }
 
-                        connection.release();
+                        context.connection.release();
                         return resolved();
                     });
                 })

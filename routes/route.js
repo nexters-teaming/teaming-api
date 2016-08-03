@@ -30,15 +30,16 @@ module.exports = function(){
     router.post('/section/:team_id/:section_id', api.section.joinSection);          // 섹션 참여
     router.put('/section/:team_id/:section_id', api.section.editSectionInfo);       // 섹션 수정
     router.delete('/section/:team_id/:section_id', api.section.deleteSection);      // 섹션 삭제
-    router.get('/section/:team_id/:section_id/party', api.section.getSectionParty);// 섹션 참여자
+    router.get('/section/:team_id/:section_id/party', api.section.getSectionParty); // 섹션 참여자
 
     // Work controller
-    router.get('/work/:team_id/:section_id', api.work.getWorkList);             // 할일 목록
-    router.post('/work/:team_id/:section_id', api.work.makeWork);               // 할일 생성
-    router.get('/work/:team_id/:section_id/:work_id', api.work.getWorkInfo);    // 할일 상세
-    router.post('/work/:team_id/:section_id/:work_id', api.work.joinWork);      // 할일 참여
-    router.put('/work/:team_id/:section_id/:work_id', api.work.editWorkInfo);   // 할일 변경
-    router.delete('/work/:team_id/:section_id/:work_id', api.work.deleteWork);   // 할일 삭제
+    router.get('/work/:team_id/:section_id', api.work.getWorkList);                 // 할일 목록
+    router.post('/work/:team_id/:section_id', api.work.makeWork);                   // 할일 생성
+    router.get('/work/:team_id/:section_id/:work_id', api.work.getWorkInfo);        // 할일 상세
+    router.post('/work/:team_id/:section_id/:work_id/join', api.work.joinWork);     // 할일 참여
+    router.delete('/work/:team_id/:section_id/:work_id/join', api.work.exitWork);   // 할일 탈퇴
+    router.put('/work/:team_id/:section_id/:work_id', api.work.editWorkInfo);       // 할일 변경
+    router.delete('/work/:team_id/:section_id/:work_id', api.work.deleteWork);      // 할일 삭제
 
     return router;
 };
