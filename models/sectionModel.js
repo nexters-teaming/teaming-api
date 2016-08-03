@@ -239,6 +239,33 @@ var section_model = {
         });
     },
 
+    exitSection : function(data) {
+        return new Promise(function(resolved, rejected) {
+            mysqlSetting.getPool()
+                .then(mysqlSetting.getConnection)
+                .then(function(context) {
+                    var insert = [data.access_token, data.section_id];
+                    var sql = "DELETE FROM SectionMember " +
+                        "WHERE section_user_id = (SELECT user_id FROM User WHERE access_token = ?) " +
+                        "AND member_section_id = ?";
+                    context.connection.query(sql, insert, function (err, rows) {
+                        if (err) {
+                            var error = new Error("섹션 탈퇴하기 실패");
+                            error.status = 500;
+                            console.error(err);
+                            return rejected(error);
+                        }
+
+                        context.connection.release();
+                        return resolved();
+                    });
+                })
+                .catch(function(err) {
+                    return rejected(err);
+                });
+        });
+    },
+
     editSectionInfo : function(data) {
         return new Promise(function(resolved, rejected) {
             mysqlSetting.getPool()

@@ -212,5 +212,41 @@ module.exports = {
                 });
             })
             .catch(next);
+    },
+
+    exitSection: function (req, res, next) {
+        var data = {
+            access_token: req.header('access-token'),
+            team_id: req.params.team_id,
+            section_id: req.params.section_id
+        };
+
+        teamModel.getTeamMemberById(data)
+            .then(function() {
+                return new Promise(function(resolved) {
+                    resolved(data);
+                });
+            })
+            .then(sectionModel.getSectionMemberById)
+            .then(function() {
+                return new Promise(function(resolved) {
+                    resolved(data);
+                })
+            })
+            .then(sectionModel.exitSection)
+            .then(function() {
+                return new Promise(function(resolved){
+                    resolved(data);
+                });
+            })
+            .then(sectionModel.getSectionParty)
+            .then(function (data) {
+                res.statusCode = 200;
+                res.json({
+                    msg: "가입 되었습니다.",
+                    data: data
+                });
+            })
+            .catch(next);
     }
 };
