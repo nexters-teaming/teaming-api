@@ -443,6 +443,40 @@ var team_model = {
                     return rejected(err);
                 });
         });
+    },
+
+    checkTeamMemberById : function(data) {
+        return new Promise(function(resolved, rejected) {
+            mysqlSetting.getPool()
+                .then(mysqlSetting.getConnection)
+                .then(function(context) {
+                    var select = [data.access_token, data.team_id];
+                    var sql = "SELECT team_user_id, member_team_id " +
+                        "FROM TeamMember " +
+                        "WHERE team_user_id = (SELECT user_id FROM User WHERE access_token = ?) " +
+                        "AND member_team_id = ? ";
+
+                    context.connection.query(sql, select, function (err, rows) {
+                        if (err) {
+                            var error = new Error("가져오기 실패");
+                            error.status = 500;
+                            console.error(err);
+                            return rejected(error);
+                        } else if (rows.length > 0) {
+                            var error = new Error("이미 가입한 팀");
+                            error.status = 400;
+                            console.error("이미 가입한 팀");
+                            return rejected(error);
+                        }
+
+                        context.connection.release();
+                        return resolved();
+                    });
+                })
+                .catch(function(err) {
+                    return rejected(err);
+                });
+        });
     }
 };
 

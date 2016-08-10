@@ -207,7 +207,7 @@ module.exports = {
             .then(function (data) {
                 res.statusCode = 200;
                 res.json({
-                    msg: "가입 되었습니다.",
+                    msg: "섹션 참여 완료",
                     data: data
                 });
             })
@@ -243,7 +243,7 @@ module.exports = {
             .then(function (data) {
                 res.statusCode = 200;
                 res.json({
-                    msg: "가입 되었습니다.",
+                    msg: "섹션 탈퇴 완료",
                     data: data
                 });
             })
