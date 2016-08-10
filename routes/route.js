@@ -8,6 +8,7 @@ var router = express.Router();
 module.exports = function(){
 
     // User controller
+    router.get('/users', api.user.getMe);        // 내 정보
     router.post('/users/oauth', api.user.joinUser);         // 유저 생성 (소셜 로그인 후)
     router.delete('/users/oauth', api.user.deleteUser);     // 로그아웃
     router.get('/users/:user_id', api.user.getUser);        // 유저 정보
@@ -19,9 +20,8 @@ module.exports = function(){
     router.get('/team/:team_id', api.team.getTeamInfo);             // 팀 정보
     router.put('/team/:team_id', api.team.editTeamInfo);            // 팀 정보 변경
     router.delete('/team/:team_id', api.team.deleteTeam);           // 팀 삭제
-    router.get('/team/:team_id/invitation', api.team.getTeamCode);  // 팀 초대코드
-    router.post('/team/:team_id/invitation', api.team.makeTeamCode);  // 팀 초대코드 생성
-    router.get('/invite/:invite_code', api.team.joinTeam);           // 초대코드로 팀 가입
+    router.post('/team/:team_id/invitation/:user_id', api.team.inviteTeam);  // 팀 초대
+    router.get('/invite/:team_id', api.team.joinTeam);           // 팀 가입
 
     // Section controller
     router.get('/section/:team_id', api.section.getSectionList);                    // 섹션 목록

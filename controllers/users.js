@@ -67,6 +67,22 @@ module.exports = {
             .catch(next);
     },
 
+    getMe : function(req, res, next) {
+        var data = {
+            access_token: req.header('access-token')
+        };
+
+        userModel.getMe(data)
+            .then(function (data) {
+                res.statusCode = 200;
+                res.json({
+                    msg: '사용자 정보 가져옴',
+                    data: data
+                });
+            })
+            .catch(next);
+    },
+
     editUser : function(req, res, next) {
         var data = {
             access_token: req.header('access-token'),

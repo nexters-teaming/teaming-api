@@ -289,35 +289,68 @@ var team_model = {
         });
     },
 
-    makeTeamCode : function(data) {
+    inviteTeam : function(data) {
         return new Promise(function(resolved, rejected) {
             mysqlSetting.getPool()
                 .then(mysqlSetting.getConnection)
+                .then(mysqlSetting.connBeginTransaction)
                 .then(function(context) {
-                    var insert = [data.team_id, data.invite_code, data.end_date, data.invite_code, data.end_date];
-                    var sql = "INSERT INTO Invite SET " +
-                        "invite_team_id = ?, " +
-                        "invite_code = ?," +
-                        "end_date = ? " +
-                        "ON DUPLICATE KEY UPDATE " +
-                        "invite_code = ?," +
-                        "end_date = ? ";
+                    return new Promise(function(resolved, rejected) {
+                        var select = [data.user_id, data.team_id];
+                        var sql = "SELECT team_user_id FROM TeamMember " +
+                            "WHERE team_user_id = ? " +
+                            "AND member_team_id = ?";
 
-                    context.connection.query(sql, insert, function (err, rows) {
-                        if (err) {
-                            var error = new Error("팀 코드 생성 실패");
-                            error.status = 500;
-                            console.error(err);
-                            return rejected(error);
-                        } else if(rows.affectedRows == 0) {
-                            var error = new Error("팀 코드 생성 실패");
-                            error.status = 500;
-                            return rejected(error);
-                        }
+                        context.connection.query(sql, select, function (err, rows) {
+                            if (err) {
+                                var error = new Error("팀원 검색 실패");
+                                error.status = 500;
+                                console.error(err);
+                                return rejected(error);
+                            }
 
-                        context.connection.release();
-                        return resolved(data);
+                            if (rows.length == 0) {
+                                return resolved(context);
+                            } else {
+                                var error = new Error("이미 가입한 팀원");
+                                error.status = 400;
+                                console.error(err);
+                                return rejected(error);
+                            }
+                        });
                     });
+                })
+                .then(function(context) {
+                    return new Promise(function(resolved, rejected) {
+                        var insert = [data.access_token, data.user_id, data.team_id];
+                        var sql = "INSERT INTO Invite SET " +
+                            "invite_sender_id = (SELECT user_id FROM User WHERE access_token = ?)," +
+                            "invite_user_id = ?, " +
+                            "invite_team_id = ?, " +
+                            "invite_time = NOW() " +
+                            "ON DUPLICATE KEY UPDATE " +
+                            "invite_time = NOW()";
+
+                        context.connection.query(sql, insert, function (err, rows) {
+                            if (err) {
+                                var error = new Error("팀 초대 실패");
+                                error.status = 500;
+                                console.error(err);
+                                return rejected(error);
+                            } else if(rows.affectedRows == 0) {
+                                var error = new Error("팀 초대 실패");
+                                error.status = 500;
+                                return rejected(error);
+                            }
+
+                            context.result = data;
+                            return resolved(context);
+                        });
+                    });
+                })
+                .then(mysqlSetting.commitTransaction)
+                .then(function(result) {
+                    return resolved(result);
                 })
                 .catch(function(err) {
                     return rejected(err);
@@ -332,10 +365,11 @@ var team_model = {
                 .then(mysqlSetting.connBeginTransaction)
                 .then(function(context) {
                     return new Promise(function(resolved, rejected) {
-                        var select = [data.invite_code];
+                        var select = [data.access_token, data.team_id];
                         var sql = "SELECT invite_team_id " +
                             "FROM Invite " +
-                            "WHERE invite_code = ? ";
+                            "WHERE invite_user_id = (SELECT user_id FROM User WHERE access_token = ?) " +
+                            "AND invite_team_id = ? ";
 
                         context.connection.query(sql, select, function (err, rows) {
                             if (err) {
@@ -344,9 +378,9 @@ var team_model = {
                                 console.error(err);
                                 return rejected(error);
                             } else if (rows.length == 0) {
-                                var error = new Error("잘못된 코드입니다.");
-                                error.status = 9400;
-                                console.error("잘못된 코드입니다.");
+                                var error = new Error("잘못된 접근입니다.");
+                                error.status = 400;
+                                console.error("잘못된 접근입니다.");
                                 return rejected(error);
                             }
 

@@ -24,13 +24,8 @@ module.exports = {
             access_token: req.header('access-token')
         };
 
-        teamModel.getTeamMemberById(data)
-            .then(function() {
-                return new Promise(function(resolved) {
-                    resolved(data);
-                });
-            })
-            .then(teamModel.getTeamList)
+
+        teamModel.getTeamList(data)
             .then(function (data) {
                 res.statusCode = 200;
                 res.json({
@@ -192,62 +187,25 @@ module.exports = {
             .catch(next);
     },
 
-    makeTeamCode : function (req, res, next) {
+    inviteTeam : function (req, res, next) {
         var data = {
             access_token: req.header('access-token'),
+            user_id: req.params.user_id,
             team_id: req.params.team_id
         };
 
-        teamModel.getTeamMemberById(data)
-            .then(function() {
-                return new Promise(function(resolved) {
-                    var crypto = require('crypto');
-                    var salt = Math.round((new Date().valueOf() * Math.random())) + "";
-                    data.invite_code = crypto.createHash("md5").update(data.team_id + salt).digest("hex");
-                    var set_date = new Date().setYear(new Date().getFullYear() + 1);
-                    var cur_date = new Date(set_date).toISOString().split("T");
-                    data.end_date = cur_date[0]+" "+cur_date[1].split(".")[0];
-
-                    resolved(data);
-                });
-            })
-            .then(teamModel.makeTeamCode)
-            .then(function (data) {
-                res.statusCode = 200;
-                res.json({
-                    msg: '초대 URL',
-                    // TODO data : data
-                    data: {
-                        invite_url: require('../credentials').host.api + '/invite/' + data.invite_code
-                    }
-                    // END TODO
-                });
-            })
-            .catch(next);
-    },
-
-    getTeamCode : function (req, res, next) {
-        var data = {
-            access_token: req.header('access-token'),
-            team_id: req.params.team_id
-        };
-
+        // TODO 여러명이 초대시 sender 변경? 또는 초대 못하게
         teamModel.getTeamMemberById(data)
             .then(function() {
                 return new Promise(function(resolved) {
                     resolved(data);
                 });
             })
-            .then(teamModel.getTeamCode)
-            .then(function (data) {
+            .then(teamModel.inviteTeam)
+            .then(function () {
                 res.statusCode = 200;
                 res.json({
-                    msg: '초대 URL',
-                    // TODO data : data
-                    data: {
-                        invite_url: require('../credentials').host.api + '/invite/' + data.invite_code
-                    }
-                    // END TODO
+                    msg: '팀 초대 완료'
                 });
             })
             .catch(next);
@@ -256,7 +214,7 @@ module.exports = {
     joinTeam : function (req, res, next) {
         var data = {
             access_token: req.header('access-token'),
-            invite_code: req.params.invite_code
+            team_id: req.params.team_id
         };
 
         teamModel.checkTeamMemberById(data)

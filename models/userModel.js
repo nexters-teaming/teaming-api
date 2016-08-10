@@ -74,6 +74,36 @@ var user_model = {
             mysqlSetting.getPool()
                 .then(mysqlSetting.getConnection)
                 .then(function(context) {
+                    var select = [data.user_id];
+                    var sql = "SELECT user_id, username FROM User " +
+                        "WHERE user_id = ? ";
+                    context.connection.query(sql, select, function (err, rows) {
+                        if (err) {
+                            var error = new Error("가져오기 실패");
+                            error.status = 500;
+                            console.error(err);
+                            return rejected(error);
+                        } else if (rows.length == 0) {
+                            var error = new Error("유저 정보 없음");
+                            error.status = 500;
+                            console.error("유저 정보 없음");
+                            return rejected(error);
+                        }
+                        context.connection.release();
+                        return resolved(rows);
+                    });
+                })
+                .catch(function(err) {
+                    return rejected(err);
+                });
+        });
+    },
+
+    getMe : function(data) {
+        return new Promise(function(resolved, rejected) {
+            mysqlSetting.getPool()
+                .then(mysqlSetting.getConnection)
+                .then(function(context) {
                     var select = [data.access_token];
                     var sql = "SELECT user_id, username FROM User " +
                         "WHERE access_token = ? ";
