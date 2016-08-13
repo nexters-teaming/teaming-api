@@ -23,10 +23,16 @@
     "description": "Internal Server Error"
   },
 
-  "9401": {
+  "9400": {
     "status": 400,
-    "message": "파라미터가 잘못되었습니다.",
+    "message": "잘못된 코드입니다.",
     "description": "invalid parameter"
+  },
+
+  "9500": {
+    "status": 500,
+    "message": "해당 정보가 없습니다.",
+    "description": "No have content"
   },
 
   "1401": {

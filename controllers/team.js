@@ -3,222 +3,373 @@
  */
 var teamModel = require('../models/teamModel');
 var Promise = require("bluebird");
-var errorHandler = require('./errorHandler');
+//var errorHandler = require('./errorHandler');
 
-var getTeamList = function(req, res, next) {
-    var data = {
-        access_token : req.header('access-token')
-    };
+/**
+ *
+ * @type {{
+ *  getTeamList: module.exports.getTeamList,
+ *  makeTeam: module.exports.makeTeam,
+ *  editTeamInfo: module.exports.editTeamInfo,
+ *  getTeamInfo: module.exports.getTeamInfo,
+ *  deleteTeam: module.exports.deleteTeam,
+ *  getTeamCode: module.exports.getTeamCode,
+ *  joinTeam: module.exports.joinTeam
+ * }}
+ */
+module.exports = {
 
-    teamModel.getTeamList(data)
-        .then(function (data) {
-            res.statusCode = 200;
-            res.json({
-                msg : '팀 목록',
-                // TODO data : data
-                data : [
-                    {
+    getTeamList: function (req, res, next) {
+        var data = {
+            access_token: req.header('access-token')
+        };
+
+        teamModel.getTeamList(data)
+            .then(function (data) {
+                res.statusCode = 200;
+                res.json({
+                    msg: '팀 목록',
+                    data: data
+                });
+            })
+            .catch(next);
+    },
+
+    makeTeam : function (req, res, next) {
+        var data = {
+            access_token: req.header('access-token'),
+            teamname: req.body.teamname,
+            description: req.body.description,
+            start_date: req.body.start_date,
+            end_date: req.body.end_date
+        };
+
+        // TODO validation
+
+        teamModel.makeTeam(data)
+            .then(function(result) {
+                return new Promise(function(resolved) {
+                    data.team_id = result;
+                    console.log(data);
+                    resolved(data);
+                });
+            })
+            .then(teamModel.getTeamProgress)
+            .then(function(result) {
+                return new Promise(function(resolved) {
+                    data.progress = result;
+                    resolved(data);
+                });
+            })
+            .then(teamModel.getTeamInfo)
+            .then(function(result) {
+                return new Promise(function(resolved) {
+                    if (data.progress.total == 0) result.team_progress = 0;
+                    else result.team_progress = data.progress.done_count/data.progress.total;
+                    result.all_progress = data.progress.all_progress;
+                    resolved(result);
+                });
+            })
+            .then(function (data) {
+                res.statusCode = 200;
+                res.json({
+                    msg: '팀 정보 저장 완료',
+                    data: data
+                    // TODO data 안에 team_progress, section_progress 추가
+                    /*team_progress : 40,
+                     section_progress : {
+                     "개발자" : 20,
+                     "디자이너" : 20
+                     }*/
+                });
+            })
+            .catch(next);
+    },
+
+    editTeamInfo : function (req, res, next) {
+        var data = {
+            access_token: req.header('access-token'),
+            team_id: req.params.team_id,
+            teamname: req.body.teamname,
+            description: req.body.description,
+            manager: req.body.manager,
+            section: req.body.section,
+            start_date: req.body.start_date,
+            end_date: req.body.end_date
+        };
+
+        teamModel.getTeamMemberById(data)
+            .then(function() {
+                return new Promise(function(resolved) {
+                    resolved(data);
+                });
+            })
+            .then(teamModel.editTeamInfo)
+            .then(function() {
+                return new Promise(function(resolved) {
+                    resolved(data);
+                });
+            })
+            .then(teamModel.getTeamProgress)
+            .then(function(result) {
+                return new Promise(function(resolved) {
+                    data.progress = result;
+                    resolved(data);
+                });
+            })
+            .then(teamModel.getTeamInfo)
+            .then(function(result) {
+                return new Promise(function(resolved) {
+                    result.team_progress = data.progress.done_count/data.progress.total;
+                    result.all_progress = data.progress.all_progress;
+                    resolved(result);
+                });
+            })
+            .then(function (data) {
+                res.statusCode = 200;
+                res.json({
+                    msg: '팀 정보 수정 완료',
+                    data: data
+                    // TODO data 안에 team_progress, section_progress 추가
+                    /*data: {
                         team_id: "10",
                         teamname: "nexters",
                         description: "개발자, 디자이너 모임",
-                        party : [10, 11, 12, 13],
-                        team_progress : 10,
-                        section_progress : {
-                            "개발자" : 20,
-                            "디자이너" : 20
+                        team_progress: 40,
+                        section_progress: {
+                            "개발자": 20,
+                            "디자이너": 20
                         },
-                        start_date : "2016-07-01 14:04:00",
-                        end_date : "2016-07-21 14:04:00"
-                    }, {
-                        team_id: "11",
-                        teamname: "nexters",
-                        description: "개발자, 디자이너 모임",
-                        party : [10, 11, 12, 13],
-                        team_progress : 10,
-                        section_progress : {
-                            "개발자" : 20,
-                            "디자이너" : 20
-                        },
-                        start_date : "2016-07-01 14:04:00",
-                        end_date : "2016-07-21 14:04:00"
-                    }
-                ]
-                // END TODO
-            });
-        })
-        .catch(errorHandler);
-};
+                        manager: "10101010",
+                        start_date: "2016-07-01 14:04:00",
+                        end_date: "2016-07-21 14:04:00"
+                    }*/
+                    // END TODO
+                });
+            })
+            .catch(next);
+    },
 
-var makeTeam = function(req, res, next) {
-    var data = {
-        access_token : req.header('access-token'),
-        teamname : req.body.teamname,
-        description : req.body.description,
-        manager : req.body.manager,
-        section : req.body.section,
-        start_date : req.body.start_date,
-        end_date : req.body.end_date
-    };
+    getTeamInfo : function (req, res, next) {
+        var data = {
+            access_token: req.header('access-token'),
+            team_id: req.params.team_id
+        };
 
-    teamModel.makeTeam(data)
-        .then(function (data) {
-            res.statusCode = 200;
-            res.json({
-                msg : '팀 정보 저장 완료',
-                // TODO data : data
-                data : {
-                    team_id : "10",
-                    teamname : "nexters",
-                    description : "개발자, 디자이너 모임",
-                    team_progress : 40,
-                    section_progress : {
-                        "개발자" : 20,
-                        "디자이너" : 20
-                    },
-                    manager : "10101010",
-                    start_date : "2016-07-01 14:04:00",
-                    end_date : "2016-07-21 14:04:00"
-                }
-                // END TODO
-            });
-        })
-        .catch(errorHandler);
-};
-
-var editTeamInfo = function(req, res, next) {
-    var data = {
-        access_token : req.header('access-token'),
-        team_id : req.params.team_id,
-        teamname : req.body.teamname,
-        description : req.body.description,
-        manager : req.body.manager,
-        section : req.body.section,
-        start_date : req.body.start_date,
-        end_date : req.body.end_date
-    };
-
-    teamModel.editTeamInfo(data)
-        .then(function (data) {
-            res.statusCode = 200;
-            res.json({
-                msg : '팀 정보 수정 완료',
-                // TODO data : data
-                data : {
-                    team_id : "10",
-                    teamname : "nexters",
-                    description : "개발자, 디자이너 모임",
-                    team_progress : 40,
-                    section_progress : {
-                        "개발자" : 20,
-                        "디자이너" : 20
-                    },
-                    manager : "10101010",
-                    start_date : "2016-07-01 14:04:00",
-                    end_date : "2016-07-21 14:04:00"
-                }
-                // END TODO
-            });
-        })
-        .catch(errorHandler);
-};
-
-var getTeamInfo = function(req, res, next) {
-    var data = {
-        access_token : req.header('access-token'),
-        team_id : req.params.team_id
-    };
-
-    teamModel.getTeamInfo(data)
-        .then(function (data) {
-            res.statusCode = 200;
-            res.json({
-                msg : '팀 상세 정보',
-                // TODO data : data
-                data : {
-                    team_id: "10",
-                    teamname: "nexters",
-                    description: "개발자, 디자이너 모임",
-                    team_logo: "http:dev.qinshihwang/image/some",
-                    party : [10, 11, 12, 13],
-                    team_progress : 10,
-                    section_progress : {
-                        "개발자" : 20,
-                        "디자이너" : 20
-                    },
-                    start_date : "2016-07-01 14:04:00",
-                    end_date : "2016-07-21 14:04:00"
-                }
-                // END TODO
-            });
-        })
-        .catch(errorHandler);
-};
-
-var deleteTeam = function(req, res, next) {
-    var data = {
-        access_token : req.header('access-token'),
-        team_id : req.params.team_id
-    };
-
-    teamModel.deleteTeam(data)
-        .then(function () {
-            res.statusCode = 200;
-            res.json({
-                msg : '팀 삭제 완료'
-            });
-        })
-        .catch(errorHandler);
-};
-
-var getTeamCode = function(req, res, next) {
-    var data = {
-        access_token : req.header('access-token'),
-        team_id : req.params.team_id
-    };
-
-    teamModel.getTeamCode(data)
-        .then(function (data) {
-            res.statusCode = 200;
-            res.json({
-                msg : '초대 URL',
-                // TODO data : data
-                data : {
-                    invite_url : "http://host.com/invite/1341343"
-                }
-                // END TODO
-            });
-        })
-        .catch(errorHandler);
-};
-
-var joinTeam = function(req, res, next) {
-    var data = {
-        access_token : req.header('access-token'),
-        invite_code: req.params.invite_code
-    };
-
-    teamModel.joinTeam(data)
-        .then(function (data) {
-            // TODO change invite code data
-            if (require('../credentials').host.api + "/ABCDEFGHIJK_HASH_CODE" == data.invite_code) {
+        teamModel.getTeamMemberById(data)
+            .then(function() {
+                return new Promise(function(resolved) {
+                    resolved(data);
+                });
+            })
+            .then(teamModel.getTeamProgress)
+            .then(function(result) {
+                return new Promise(function(resolved) {
+                    data.progress = result;
+                    resolved(data);
+                });
+            })
+            .then(teamModel.getTeamInfo)
+            .then(function(result) {
+                return new Promise(function(resolved) {
+                    result.team_progress = data.progress.done_count/data.progress.total;
+                    result.all_progress = data.progress.all_progress;
+                    console.log(result);
+                    resolved(result);
+                });
+            })
+            .then(function (data) {
                 res.statusCode = 200;
                 res.json({
-                    msg : "가입 되었습니다."
+                    msg: '팀 상세 정보',
+                    data: data
                 });
-            } else {
-                res.json({
-                    msg : "잘못된 초대코드 입니다."
-                })
-            }
-            // END TODO
-        })
-        .catch(errorHandler);
-};
+            })
+            .catch(next);
+    },
 
-module.exports.getTeamList = getTeamList;
-module.exports.makeTeam = makeTeam;
-module.exports.editTeamInfo = editTeamInfo;
-module.exports.getTeamInfo = getTeamInfo;
-module.exports.deleteTeam = deleteTeam;
-module.exports.getTeamCode = getTeamCode;
-module.exports.joinTeam = joinTeam;
+    deleteTeam : function (req, res, next) {
+        var data = {
+            access_token: req.header('access-token'),
+            team_id: req.params.team_id
+        };
+
+        teamModel.getTeamMemberById(data)
+            .then(function() {
+                return new Promise(function(resolved) {
+                    resolved(data);
+                });
+            })
+            .then(teamModel.deleteTeam)
+            .then(function () {
+                res.statusCode = 200;
+                res.json({
+                    msg: '팀 삭제 완료'
+                });
+            })
+            .catch(next);
+    },
+
+    // deprecated
+    inviteTeam : function (req, res, next) {
+        var data = {
+            access_token: req.header('access-token'),
+            user_id: req.params.user_id,
+            team_id: req.params.team_id
+        };
+
+        // TODO 여러명이 초대시 sender 변경? 또는 초대 못하게
+        teamModel.getTeamMemberById(data)
+            .then(function() {
+                return new Promise(function(resolved) {
+                    resolved(data);
+                });
+            })
+            .then(teamModel.inviteTeam)
+            .then(function () {
+                res.statusCode = 200;
+                res.json({
+                    msg: '팀 초대 완료'
+                });
+            })
+            .catch(next);
+    },
+
+    inviteURL : function (req, res, next) {
+        var data = {
+            access_token: req.header('access-token'),
+            team_id: req.params.team_id
+        };
+
+        // TODO 여러명이 초대시 sender 변경? 또는 초대 못하게
+        teamModel.getTeamMemberById(data)
+            .then(function() {
+                return new Promise(function(resolved) {
+                    resolved(data);
+                });
+            })
+            .then(function () {
+                res.statusCode = 200;
+                res.json({
+                    msg: '팀 초대 URL',
+                    data: require('../credentials').host.api + '/invite/' + data.team_id
+                });
+            })
+            .catch(next);
+    },
+
+    joinTeam : function (req, res, next) {
+        var data = {
+            access_token: req.header('access-token'),
+            team_id: req.params.team_id
+        };
+
+        teamModel.checkTeamMemberById(data)
+            .then(function() {
+                return new Promise(function(resolved) {
+                    return resolved(data);
+                })
+            })
+            .then(teamModel.joinTeam)
+            .then(function () {
+                res.statusCode = 200;
+                res.json({
+                    msg: "가입 신청 되었습니다."
+                });
+            })
+            .catch(next);
+    },
+
+    getJoinAsk : function (req, res, next) {
+        var data = {
+            access_token: req.header('access-token'),
+            team_id: req.params.team_id
+        };
+
+        teamModel.getTeamMemberById(data)
+            .then(function() {
+                return new Promise(function(resolved) {
+                    return resolved(data);
+                })
+            })
+            .then(teamModel.getJoinAsk)
+            .then(function (data) {
+                res.statusCode = 200;
+                res.json({
+                    msg: "팀 신청 정보.",
+                    data: data
+                });
+            })
+            .catch(next);
+    },
+
+    approveTeam : function (req, res, next) {
+        var data = {
+            access_token: req.header('access-token'),
+            team_id: req.params.team_id,
+            user_id: req.params.user_id
+        };
+
+        teamModel.getTeamMemberById(data)
+            .then(function() {
+                return new Promise(function(resolved) {
+                    return resolved(data);
+                })
+            })
+            .then(teamModel.approveTeam)
+            .then(function () {
+                res.statusCode = 200;
+                res.json({
+                    msg: "가입 되었습니다."
+                });
+            })
+            .catch(next);
+    },
+
+    approveRecord : function (req, res, next) {
+        var data = {
+            access_token: req.header('access-token'),
+            team_id: req.params.team_id
+        };
+
+        teamModel.getTeamMemberById(data)
+            .then(function() {
+                return new Promise(function(resolved) {
+                    return resolved(data);
+                })
+            })
+            .then(teamModel.getApproveRecord)
+            .then(function (data) {
+                res.statusCode = 200;
+                res.json({
+                    msg: "팀 가입 신청 승낙 정보.",
+                    data: data
+                });
+            })
+            .catch(next);
+    },
+
+    leaveTeam : function (req, res, next) {
+        var data = {
+            access_token: req.header('access-token'),
+            team_id: req.params.team_id
+        };
+
+        // TODO if team member is empty delete team
+        teamModel.getTeamMemberById(data)
+            .then(function() {
+                return new Promise(function(resolved) {
+                    return resolved(data);
+                })
+            })
+            .then(teamModel.leaveTeam)
+            .then(function () {
+                res.statusCode = 200;
+                res.json({
+                    msg: "탈퇴 되었습니다."
+                });
+            })
+            .catch(next);
+    },
+
+};
