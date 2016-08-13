@@ -20,8 +20,13 @@ module.exports = function(){
     router.get('/team/:team_id', api.team.getTeamInfo);             // 팀 정보
     router.put('/team/:team_id', api.team.editTeamInfo);            // 팀 정보 변경
     router.delete('/team/:team_id', api.team.deleteTeam);           // 팀 삭제
-    router.post('/team/:team_id/invitation/:user_id', api.team.inviteTeam);  // 팀 초대
-    router.get('/invite/:team_id', api.team.joinTeam);           // 팀 가입
+    router.get('/team/:team_id/invitation', api.team.inviteURL);    // 팀 초대
+    router.delete('/team/:team_id/member', api.team.leaveTeam);     // 팀 탈퇴
+    //router.get('/invite/:team_id', api.team.joinTeam);            // 팀 가입 페이지
+    router.post('/invite/:team_id', api.team.joinTeam);             // 팀 가입 신청
+    router.get('/invite/:team_id', api.team.getJoinAsk);            // 팀 가입 신청 목록
+    router.post('/invite/:team_id/:user_id', api.team.approveTeam); // 팀 가입 승인
+    router.get('/invite/:team_id/record', api.team.approveRecord);  // 팀 가입 승인 기록
 
     // Section controller
     router.get('/section/:team_id', api.section.getSectionList);                    // 섹션 목록

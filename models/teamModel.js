@@ -290,6 +290,7 @@ var team_model = {
         });
     },
 
+    // deprecated
     inviteTeam : function(data) {
         return new Promise(function(resolved, rejected) {
             mysqlSetting.getPool()
@@ -367,35 +368,136 @@ var team_model = {
                 .then(function(context) {
                     return new Promise(function(resolved, rejected) {
                         var select = [data.access_token, data.team_id];
-                        var sql = "SELECT invite_team_id " +
-                            "FROM Invite " +
-                            "WHERE invite_user_id = (SELECT user_id FROM User WHERE access_token = ?) " +
-                            "AND invite_team_id = ? ";
+                        var sql = "SELECT team_user_id FROM TeamMember " +
+                            "WHERE team_user_id = (SELECT user_id FROM User WHERE access_token = ?) " +
+                            "AND member_team_id = ?";
 
                         context.connection.query(sql, select, function (err, rows) {
                             if (err) {
-                                var error = new Error("팀 가져오기 실패");
+                                var error = new Error("팀원 검색 실패");
                                 error.status = 500;
                                 console.error(err);
                                 return rejected(error);
-                            } else if (rows.length == 0) {
-                                var error = new Error("잘못된 접근입니다.");
-                                error.status = 400;
-                                console.error("잘못된 접근입니다.");
-                                return rejected(error);
                             }
 
-                            context.team_id = rows[0].invite_team_id;
-                            return resolved(context);
+                            if (rows.length == 0) {
+                                return resolved(context);
+                            } else {
+                                var error = new Error("이미 가입한 팀원");
+                                error.status = 400;
+                                console.error(err);
+                                return rejected(error);
+                            }
                         });
                     });
                 })
                 .then(function(context) {
                     return new Promise(function(resolved, rejected) {
-                        var select = [data.access_token, context.team_id];
+                        var select = [data.access_token, data.team_id];
+                        var sql = "SELECT ask_user_id FROM JoinAsk " +
+                            "WHERE ask_user_id = (SELECT user_id FROM User WHERE access_token = ?) " +
+                            "AND ask_team_id = ?";
+
+                        context.connection.query(sql, select, function (err, rows) {
+                            if (err) {
+                                var error = new Error("신청 검색 실패");
+                                error.status = 500;
+                                console.error(err);
+                                return rejected(error);
+                            }
+
+                            if (rows.length == 0) {
+                                return resolved(context);
+                            } else {
+                                var error = new Error("이미 신청한 팀");
+                                error.status = 400;
+                                console.error(err);
+                                return rejected(error);
+                            }
+                        });
+                    });
+                })
+                .then(function(context) {
+                    return new Promise(function(resolved, rejected) {
+                        var insert = [data.access_token, data.team_id];
+                        var sql = "INSERT INTO JoinAsk SET " +
+                            "ask_user_id = (SELECT user_id FROM User WHERE access_token = ?), " +
+                            "ask_team_id = ?, " +
+                            "ask_time = NOW() " +
+                            "ON DUPLICATE KEY UPDATE " +
+                            "ask_time = NOW()";
+
+                        context.connection.query(sql, insert, function (err, rows) {
+                            if (err) {
+                                var error = new Error("팀 신청 실패");
+                                error.status = 500;
+                                console.error(err);
+                                return rejected(error);
+                            } else if(rows.affectedRows == 0) {
+                                var error = new Error("팀 신청 실패");
+                                error.status = 500;
+                                return rejected(error);
+                            }
+
+                            context.result = data;
+                            return resolved(context);
+                        });
+                    });
+                })
+                .then(mysqlSetting.commitTransaction)
+                .then(function(result) {
+                    return resolved(result);
+                })
+                .catch(function(err) {
+                    return rejected(err);
+                });
+        });
+    },
+
+    getJoinAsk : function(data) {
+        return new Promise(function(resolved, rejected) {
+            mysqlSetting.getPool()
+                .then(mysqlSetting.getConnection)
+                .then(function(context) {
+                    var select = [data.team_id];
+                    var sql = "SELECT ask_user_id, User.username, ask_time " +
+                        "FROM JoinAsk INNER JOIN User " +
+                        "ON ask_user_id = User.user_id " +
+                        "WHERE ask_team_id = ? ";
+
+                    context.connection.query(sql, select, function (err, rows) {
+                        if (err) {
+                            var error = new Error("가져오기 실패");
+                            error.status = 500;
+                            console.error(err);
+                            return rejected(error);
+                        } else if (rows.length == 0) {
+                            var error = new Error("팀 신청 없음");
+                            error.status = 500;
+                            console.error("팀 신청 없음");
+                            return rejected(error);
+                        }
+                        context.connection.release();
+                        return resolved(rows);
+                    });
+                })
+                .catch(function(err) {
+                    return rejected(err);
+                });
+        });
+    },
+
+    approveTeam : function(data) {
+        return new Promise(function(resolved, rejected) {
+            mysqlSetting.getPool()
+                .then(mysqlSetting.getConnection)
+                .then(mysqlSetting.connBeginTransaction)
+                .then(function(context) {
+                    return new Promise(function(resolved, rejected) {
+                        var select = [data.user_id, data.team_id];
                         var sql = "SELECT team_user_id " +
                             "FROM TeamMember " +
-                            "WHERE team_user_id = (SELECT user_id FROM User WHERE access_token = ?) " +
+                            "WHERE team_user_id = ? " +
                             "AND member_team_id = ?";
 
                         context.connection.query(sql, select, function (err, rows) {
@@ -419,10 +521,111 @@ var team_model = {
                 })
                 .then(function(context) {
                     return new Promise(function(resolved, rejected) {
-                        var insert = [data.access_token, context.team_id];
+                        var insert = [data.user_id, data.team_id];
                         var sql = "INSERT INTO TeamMember SET " +
-                            "team_user_id = (SELECT user_id FROM User WHERE access_token = ?), " +
+                            "team_user_id = ?, " +
                             "member_team_id = ? ";
+
+                        context.connection.query(sql, insert, function (err, rows) {
+                            if (err) {
+                                var error = new Error("팀 가입 실패");
+                                error.status = 500;
+                                console.error(err);
+                                return rejected(error);
+                            }
+
+                            return resolved(context);
+                        });
+                    });
+                })
+                .then(function(context) {
+                    return new Promise(function(resolved, rejected) {
+                        var select = [data.user_id, data.access_token, data.team_id];
+                        var sql = "INSERT INTO JoinRecord SET " +
+                            "join_user_id = ?, " +
+                            "join_approver_id = (SELECT user_id FROM User WHERE access_token = ?), " +
+                            "join_team_id = ?, " +
+                            "approve_time = NOW() ";
+
+                        context.connection.query(sql, select, function (err, rows) {
+                            if (err) {
+                                var error = new Error("가입 기록 실패");
+                                error.status = 500;
+                                console.error(err);
+                                return rejected(error);
+                            }
+
+                            return resolved(context);
+                        });
+                    });
+                })
+                .then(function(context) {
+                    return new Promise(function(resolved, rejected) {
+                        var select = [data.user_id, data.team_id];
+                        var sql = "DELETE FROM JoinAsk " +
+                            "WHERE ask_user_id = ? " +
+                            "AND ask_team_id = ? ";
+
+                        context.connection.query(sql, select, function (err, rows) {
+                            if (err) {
+                                var error = new Error("신청 삭제실패");
+                                error.status = 500;
+                                console.error(err);
+                                return rejected(error);
+                            }
+
+                            return resolved(context);
+                        });
+                    });
+                })
+                .then(mysqlSetting.commitTransaction)
+                .then(function() {
+                    return resolved();
+                })
+                .catch(function(err) {
+                    return rejected(err);
+                });
+        });
+    },
+
+    leaveTeam : function(data) {
+        return new Promise(function(resolved, rejected) {
+            mysqlSetting.getPool()
+                .then(mysqlSetting.getConnection)
+                .then(mysqlSetting.connBeginTransaction)
+                .then(function(context) {
+                    return new Promise(function(resolved, rejected) {
+                        var select = [data.access_token, data.team_id];
+                        var sql = "SELECT team_user_id " +
+                            "FROM TeamMember " +
+                            "WHERE team_user_id = (SELECT user_id FROM User WHERE access_token = ?) " +
+                            "AND member_team_id = ?";
+
+                        context.connection.query(sql, select, function (err, rows) {
+                            if (err) {
+                                var error = new Error("팀원 가져오기 실패");
+                                error.status = 400;
+                                console.error(err);
+                                return rejected(error);
+                            }
+
+                            if (rows.length == 0) {
+                                var error = new Error("가입하지 않은 팀 입니다.");
+                                error.status = 400;
+                                console.error(err);
+                                return rejected(error);
+                            } else {
+                                return resolved(context);
+                            }
+                        });
+                    });
+                })
+                .then(function(context) {
+                    return new Promise(function(resolved, rejected) {
+                        var insert = [data.access_token, data.team_id];
+                        var sql = "DELETE FROM TeamMember " +
+                            "WHERE team_user_id = (SELECT user_id FROM User WHERE access_token = ?) " +
+                            "AND member_team_id = ? ";
 
                         context.connection.query(sql, insert, function (err, rows) {
                             if (err) {
@@ -439,6 +642,39 @@ var team_model = {
                 .then(mysqlSetting.commitTransaction)
                 .then(function() {
                     return resolved();
+                })
+                .catch(function(err) {
+                    return rejected(err);
+                });
+        });
+    },
+
+    getApproveRecord : function(data) {
+        return new Promise(function(resolved, rejected) {
+            mysqlSetting.getPool()
+                .then(mysqlSetting.getConnection)
+                .then(function(context) {
+                    var select = [data.team_id];
+                    var sql = "SELECT join_user_id, Joinuser.username AS joinuser_name, join_approver_id, Approver.username AS approver_name, join_team_id, approve_time " +
+                        "FROM teaming.JoinRecord, teaming.User Joinuser, teaming.User Approver " +
+                        "WHERE Joinuser.user_id = JoinRecord.join_user_id " +
+                        "AND Approver.user_id = JoinRecord.join_approver_id";
+
+                    context.connection.query(sql, select, function (err, rows) {
+                        if (err) {
+                            var error = new Error("가져오기 실패");
+                            error.status = 500;
+                            console.error(err);
+                            return rejected(error);
+                        } else if (rows.length == 0) {
+                            var error = new Error("승낙 기록 없음");
+                            error.status = 500;
+                            console.error("승낙 기록 없음");
+                            return rejected(error);
+                        }
+                        context.connection.release();
+                        return resolved(rows);
+                    });
                 })
                 .catch(function(err) {
                     return rejected(err);

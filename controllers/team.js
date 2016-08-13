@@ -187,6 +187,7 @@ module.exports = {
             .catch(next);
     },
 
+    // deprecated
     inviteTeam : function (req, res, next) {
         var data = {
             access_token: req.header('access-token'),
@@ -211,6 +212,29 @@ module.exports = {
             .catch(next);
     },
 
+    inviteURL : function (req, res, next) {
+        var data = {
+            access_token: req.header('access-token'),
+            team_id: req.params.team_id
+        };
+
+        // TODO 여러명이 초대시 sender 변경? 또는 초대 못하게
+        teamModel.getTeamMemberById(data)
+            .then(function() {
+                return new Promise(function(resolved) {
+                    resolved(data);
+                });
+            })
+            .then(function () {
+                res.statusCode = 200;
+                res.json({
+                    msg: '팀 초대 URL',
+                    data: require('../credentials').host.api + '/invite/' + data.team_id
+                });
+            })
+            .catch(next);
+    },
+
     joinTeam : function (req, res, next) {
         var data = {
             access_token: req.header('access-token'),
@@ -227,10 +251,100 @@ module.exports = {
             .then(function () {
                 res.statusCode = 200;
                 res.json({
+                    msg: "가입 신청 되었습니다."
+                });
+            })
+            .catch(next);
+    },
+
+    getJoinAsk : function (req, res, next) {
+        var data = {
+            access_token: req.header('access-token'),
+            team_id: req.params.team_id
+        };
+
+        teamModel.getTeamMemberById(data)
+            .then(function() {
+                return new Promise(function(resolved) {
+                    return resolved(data);
+                })
+            })
+            .then(teamModel.getJoinAsk)
+            .then(function (data) {
+                res.statusCode = 200;
+                res.json({
+                    msg: "팀 신청 정보.",
+                    data: data
+                });
+            })
+            .catch(next);
+    },
+
+    approveTeam : function (req, res, next) {
+        var data = {
+            access_token: req.header('access-token'),
+            team_id: req.params.team_id,
+            user_id: req.params.user_id
+        };
+
+        teamModel.getTeamMemberById(data)
+            .then(function() {
+                return new Promise(function(resolved) {
+                    return resolved(data);
+                })
+            })
+            .then(teamModel.approveTeam)
+            .then(function () {
+                res.statusCode = 200;
+                res.json({
                     msg: "가입 되었습니다."
                 });
             })
             .catch(next);
-    }
+    },
+    approveRecord : function (req, res, next) {
+        var data = {
+            access_token: req.header('access-token'),
+            team_id: req.params.team_id
+        };
+
+        teamModel.getTeamMemberById(data)
+            .then(function() {
+                return new Promise(function(resolved) {
+                    return resolved(data);
+                })
+            })
+            .then(teamModel.getApproveRecord)
+            .then(function (data) {
+                res.statusCode = 200;
+                res.json({
+                    msg: "팀 가입 신청 승낙 정보.",
+                    data: data
+                });
+            })
+            .catch(next);
+    },
+
+    leaveTeam : function (req, res, next) {
+        var data = {
+            access_token: req.header('access-token'),
+            team_id: req.params.team_id
+        };
+
+        teamModel.getTeamMemberById(data)
+            .then(function() {
+                return new Promise(function(resolved) {
+                    return resolved(data);
+                })
+            })
+            .then(teamModel.leaveTeam)
+            .then(function () {
+                res.statusCode = 200;
+                res.json({
+                    msg: "탈퇴 되었습니다."
+                });
+            })
+            .catch(next);
+    },
 
 };
