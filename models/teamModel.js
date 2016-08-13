@@ -11,11 +11,15 @@ var team_model = {
             mysqlSetting.getPool()
                 .then(mysqlSetting.getConnection)
                 .then(function(context) {
-                    var select = [];
-                    var sql = "SELECT team_id, teamname, description, GROUP_CONCAT(TeamMember.team_user_id) AS party, start_date, end_date " +
-                        "FROM Team " +
-                        "INNER JOIN TeamMember " +
-                        "ON Team.team_id = TeamMember.member_team_id ";
+                    var select = [data.access_token];
+                    var sql = "SELECT team_id, teamname, description, GROUP_CONCAT(TeamMember.team_user_id) AS party, Team.start_date, Team.end_date, " +
+                        "(SELECT COUNT(section_progress) FROM teaming.Section WHERE section_team_id = Team.team_id AND section_progress = 2) AS done_count, " +
+                        "(SELECT COUNT(section_progress) FROM teaming.Section WHERE section_team_id = Team.team_id) AS total, " +
+                        "(SELECT GROUP_CONCAT(Section.section_title, ':', Section.section_progress) FROM teaming.Section WHERE section_team_id = Team.team_id) AS sections " +
+                        "FROM teaming.Team " +
+                        "INNER JOIN teaming.TeamMember " +
+                        "ON Team.team_id = TeamMember.member_team_id " +
+                        "WHERE team_id IN((SELECT member_team_id FROM teaming.TeamMember WHERE team_user_id = (SELECT user_id FROM User WHERE access_token = ?)))";
 
                     sql += "GROUP BY team_id LIMIT 20 ";
                     context.connection.query(sql, select, function (err, rows) {
@@ -29,9 +33,28 @@ var team_model = {
                             error.status = 500;
                             return rejected(error);
                         }
+
+                        var all_progress = [];
                         rows.forEach(function(col) {
                             col.party = JSON.parse("["+col.party+"]");
+                            var sections = col.sections.split(",");
+                            sections.forEach(function(inner_col, inner_index) {
+                                var section = inner_col.split(":");
+                                all_progress[inner_index] = {
+                                    section_title: section[0],
+                                    section_progress: section[1]
+                                };
+
+                                // input each row progress
+                                if (sections.length == inner_index+1) {
+                                    col.all_progress = all_progress;
+                                    all_progress = [];
+                                }
+                            });
+                            // if end calculate each progress then delete key of sections
+                            delete col['sections'];
                         });
+
                         context.connection.release();
                         return resolved(rows);
                     });
@@ -99,36 +122,14 @@ var team_model = {
                                 error.status = 500;
                                 return rejected(error);
                             }
-                            context.team_id = rows.insertId;
+                            context.result = rows.insertId;
                             return resolved(context);
                         });
                     });
                 })
                 .then(function(context) {
                     return new Promise(function(resolved, rejected) {
-                        var select = [context.team_id];
-                        var sql = "SELECT team_id, teamname, description, manager, start_date, end_date FROM Team " +
-                            "WHERE team_id = ? ";
-                        context.connection.query(sql, select, function (err, rows) {
-                            if (err) {
-                                var error = new Error("가져오기 실패");
-                                error.status = 500;
-                                console.error(err);
-                                return rejected(error);
-                            } else if (rows.length == 0) {
-                                var error = new Error("팀 정보 없음");
-                                error.status = 500;
-                                console.error("팀 정보 없음");
-                                return rejected(error);
-                            }
-                            context.team_info = rows[0];
-                            return resolved(context);
-                        });
-                    });
-                })
-                .then(function(context) {
-                    return new Promise(function(resolved, rejected) {
-                        var insert = [data.access_token, context.team_info.team_id];
+                        var insert = [data.access_token, context.result];
                         var sql = "INSERT INTO TeamMember SET " +
                             "`team_user_id` = (SELECT user_id FROM User WHERE access_token = ?), " +
                             "`member_team_id` = ? ";
@@ -143,7 +144,6 @@ var team_model = {
                                 error.status = 500;
                                 return rejected(error);
                             }
-                            context.result = context.team_info;
                             return resolved(context);
                         });
                     });
@@ -183,12 +183,73 @@ var team_model = {
                             console.error("팀 정보 없음");
                             return rejected(error);
                         }
-                        rows.forEach(function(col) {
-                            col.party = JSON.parse("["+col.party+"]");
-                        });
+
+                        rows[0].party = JSON.parse("["+rows[0].party+"]");
                         context.connection.release();
-                        return resolved(rows);
+                        return resolved(rows[0]);
                     });
+                })
+                .catch(function(err) {
+                    return rejected(err);
+                });
+        });
+    },
+
+    getTeamProgress : function(data) {
+        return new Promise(function(resolved, rejected) {
+            mysqlSetting.getPool()
+                .then(mysqlSetting.getConnection)
+                .then(mysqlSetting.connBeginTransaction)
+                .then(function(context) {
+                    return new Promise(function(resolved, rejected) {
+                        var select = [data.team_id];
+                        var sql = "SELECT section_title, section_progress " +
+                            "FROM Section " +
+                            "WHERE section_team_id = ? ";
+
+                        context.connection.query(sql, select, function (err, rows) {
+                            if (err) {
+                                var error = new Error("가져오기 실패");
+                                error.status = 500;
+                                console.error(err);
+                                return rejected(error);
+                            }
+
+                            context.result = {total: rows.length};
+                            context.result.all_progress = rows;
+                            return resolved(context);
+                        });
+                    });
+                })
+                .then(function(context) {
+                    return new Promise(function(resolved, rejected) {
+                        var select = [data.team_id];
+                        var sql = "SELECT COUNT(section_progress) AS done_count " +
+                            "FROM Section " +
+                            "WHERE section_team_id = ? " +
+                            "AND section_progress = 2";
+
+                        context.connection.query(sql, select, function (err, rows) {
+                            if (err) {
+                                var error = new Error("가져오기 실패");
+                                error.status = 500;
+                                console.error(err);
+                                return rejected(error);
+                            } else if (rows.length == 0) {
+                                var error = new Error("팀 정보 없음");
+                                error.status = 500;
+                                console.error("팀 정보 없음");
+                                return rejected(error);
+                            }
+
+                            context.result.done_count = rows[0].done_count;
+                            return resolved(context);
+                        });
+                    });
+                })
+                .then(mysqlSetting.commitTransaction)
+                .then(function(result) {
+                    return resolved(result);
                 })
                 .catch(function(err) {
                     return rejected(err);
@@ -220,28 +281,6 @@ var team_model = {
                                 error.status = 500;
                                 return rejected(error);
                             }
-                            return resolved(context);
-                        });
-                    });
-                })
-                .then(function(context) {
-                    return new Promise(function(resolved, rejected) {
-                        var select = [data.team_id];
-                        var sql = "SELECT team_id, teamname, description, manager, start_date, end_date FROM Team " +
-                            "WHERE team_id = ? ";
-                        context.connection.query(sql, select, function (err, rows) {
-                            if (err) {
-                                var error = new Error("가져오기 실패");
-                                error.status = 500;
-                                console.error(err);
-                                return rejected(error);
-                            } else if (rows.length == 0) {
-                                var error = new Error("팀 정보 없음");
-                                error.status = 500;
-                                console.error("팀 정보 없음");
-                                return rejected(error);
-                            }
-                            context.result = rows[0]
                             return resolved(context);
                         });
                     });

@@ -97,6 +97,7 @@ module.exports = {
             work_title: req.body.work_title,
             work_desc: req.body.work_desc,
             worker: req.body.worker,
+            work_progress: req.body.work_progress,
             start_date: req.body.start_date,
             end_date: req.body.end_date
         };
@@ -105,9 +106,27 @@ module.exports = {
             .then(function() {
                 return new Promise(function(resolved) {
                     return resolved(data);
-                })
+                });
             })
             .then(workModel.editWorkInfo)
+            .then(function() {
+                return new Promise(function(resolved) {
+                    return resolved(data);
+                });
+            })
+            .then(workModel.getWorkProgress)
+            .then(function(result) {
+                return new Promise(function(resolved) {
+                    data.progress = parseInt(result.done_count/result.total);
+                    return resolved(data);
+                });
+            })
+            .then(sectionModel.updateProgress)
+            .then(function() {
+                return new Promise(function(resolved) {
+                    return resolved(data);
+                });
+            })
             .then(workModel.getWorkInfo)
             .then(function (data) {
                 res.statusCode = 200;

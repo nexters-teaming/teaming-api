@@ -232,6 +232,120 @@ var work_model = {
         });
     },
 
+    getWorkProgress : function(data) {
+        return new Promise(function(resolved, rejected) {
+            mysqlSetting.getPool()
+                .then(mysqlSetting.getConnection)
+                .then(mysqlSetting.connBeginTransaction)
+                .then(function(context) {
+                    return new Promise(function(resolved, rejected) {
+                        var select = [data.section_id];
+                        var sql = "SELECT COUNT(work_progress) AS total " +
+                            "FROM Work " +
+                            "WHERE work_section_id = ?";
+                        context.connection.query(sql, select, function (err, rows) {
+                            if (err) {
+                                var error = new Error("가져오기 실패");
+                                error.status = 500;
+                                console.error(err);
+                                return rejected(error);
+                            } else if (rows.length == 0) {
+                                var error = new Error("할일이 없습니다.");
+                                error.status = 500;
+                                console.error(err);
+                                return rejected(error);
+                            }
+
+                            context.result = { total : rows[0].total };
+                            return resolved(context);
+                        });
+                    });
+                })
+                .then(function(context) {
+                    return new Promise(function(resolved, rejected) {
+                        var select = [data.section_id];
+                        var sql = "SELECT COUNT(work_progress) AS todo_count " +
+                            "FROM Work " +
+                            "WHERE work_section_id = ? " +
+                            "AND work_progress = 0";
+                        context.connection.query(sql, select, function (err, rows) {
+                            if (err) {
+                                var error = new Error("가져오기 실패");
+                                error.status = 500;
+                                console.error(err);
+                                return rejected(error);
+                            } else if (rows.length == 0) {
+                                var error = new Error("할일이 없습니다.");
+                                error.status = 500;
+                                console.error(err);
+                                return rejected(error);
+                            }
+
+                            context.result.todo_count = rows[0].todo_count;
+                            return resolved(context);
+                        });
+                    });
+                })
+                .then(function(context) {
+                    return new Promise(function(resolved, rejected) {
+                        var select = [data.section_id];
+                        var sql = "SELECT COUNT(work_progress) AS doing_count " +
+                            "FROM Work " +
+                            "WHERE work_section_id = ? " +
+                            "AND work_progress = 1";
+                        context.connection.query(sql, select, function (err, rows) {
+                            if (err) {
+                                var error = new Error("가져오기 실패");
+                                error.status = 500;
+                                console.error(err);
+                                return rejected(error);
+                            } else if (rows.length == 0) {
+                                var error = new Error("할일이 없습니다.");
+                                error.status = 500;
+                                console.error(err);
+                                return rejected(error);
+                            }
+
+                            context.result.doing_count = rows[0].doing_count;
+                            return resolved(context);
+                        });
+                    });
+                })
+                .then(function(context) {
+                    return new Promise(function (resolved, rejected) {
+                        var select = [data.section_id];
+                        var sql = "SELECT COUNT(work_progress) AS done_count " +
+                            "FROM Work " +
+                            "WHERE work_section_id = ? " +
+                            "AND work_progress = 2";
+                        context.connection.query(sql, select, function (err, rows) {
+                            if (err) {
+                                var error = new Error("가져오기 실패");
+                                error.status = 500;
+                                console.error(err);
+                                return rejected(error);
+                            } else if (rows.length == 0) {
+                                var error = new Error("할일이 없습니다.");
+                                error.status = 500;
+                                console.error(err);
+                                return rejected(error);
+                            }
+
+                            context.result.done_count = rows[0].done_count;
+                            return resolved(context);
+                        });
+                    });
+                })
+                .then(mysqlSetting.commitTransaction)
+                .then(function(data) {
+                    return resolved(data);
+                })
+                .catch(function(err) {
+                    return rejected(err);
+                });
+        });
+    },
+
     getWorkMemberById : function(data) {
         return new Promise(function(resolved, rejected) {
             mysqlSetting.getPool()
@@ -307,13 +421,14 @@ var work_model = {
                 .then(mysqlSetting.connBeginTransaction)
                 .then(function(context) {
                     return new Promise(function(resolved, rejected) {
-                        var insert = [data.section_id, data.work_title, data.work_desc, data.start_date, data.end_date, data.work_id];
+                        var insert = [data.section_id, data.work_title, data.work_desc, data.start_date, data.end_date, data.work_progress, data.work_id];
                         var sql = "UPDATE Work SET " +
                             "work_section_id = ?, " +
                             "work_title = ?, " +
                             "work_desc = ?, " +
                             "start_date = ?, " +
                             "end_date = ?, " +
+                            "work_progress = ?, " +
                             "edit_date = NOW() " +
                             "WHERE work_id = ?";
                         context.connection.query(sql, insert, function (err, rows) {

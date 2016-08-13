@@ -105,7 +105,7 @@ var section_model = {
                 .then(function(context) {
                     return new Promise(function(resolved, rejected) {
                         var select = [data.section_id];
-                        var sql = "SELECT section_id, section_title " +
+                        var sql = "SELECT section_id, section_title, section_progress " +
                             "FROM Section " +
                             "WHERE section_id = ?";
                         context.connection.query(sql, select, function (err, rows) {
@@ -385,6 +385,44 @@ var section_model = {
                 })
                 .catch(function(err) {
                     return rejected(err)
+                });
+        });
+    },
+
+    updateProgress : function(data) {
+        return new Promise(function(resolved, rejected) {
+            mysqlSetting.getPool()
+                .then(mysqlSetting.getConnection)
+                .then(mysqlSetting.connBeginTransaction)
+                .then(function(context) {
+                    return new Promise(function(resolved, rejected) {
+                        var insert = [data.progress, data.section_id];
+                        var sql = "UPDATE Section SET " +
+                            "section_progress = ? " +
+                            "WHERE section_id = ? ";
+                        context.connection.query(sql, insert, function (err, rows) {
+                            if (err) {
+                                var error = new Error("섹션 진행도 변경 실패");
+                                error.status = 500;
+                                console.error(err);
+                                return rejected(error);
+                            } else if(rows.affectedRows == 0) {
+                                var error = new Error("변경된 섹션 없음");
+                                error.status = 500;
+                                return rejected(error);
+                            }
+
+                            context.result = rows;
+                            return resolved(context);
+                        });
+                    });
+                })
+                .then(mysqlSetting.commitTransaction)
+                .then(function(data) {
+                    return resolved(data);
+                })
+                .catch(function(err) {
+                    return rejected(err);
                 });
         });
     }

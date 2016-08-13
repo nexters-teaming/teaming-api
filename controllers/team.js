@@ -24,30 +24,12 @@ module.exports = {
             access_token: req.header('access-token')
         };
 
-
         teamModel.getTeamList(data)
             .then(function (data) {
                 res.statusCode = 200;
                 res.json({
                     msg: '팀 목록',
                     data: data
-                    // TODO data 안에 team_progress, section_progress 추가
-                    /*data: [
-                        {
-                            team_id: "10",
-                            teamname: "nexters",
-                            description: "개발자, 디자이너 모임",
-                            party: [10, 11, 12, 13],
-                            team_progress: 10,
-                            section_progress: {
-                                "개발자": 20,
-                                "디자이너": 20
-                            },
-                            start_date: "2016-07-01 14:04:00",
-                            end_date: "2016-07-21 14:04:00"
-                        }
-                    ]*/
-                    // END TODO
                 });
             })
             .catch(next);
@@ -65,7 +47,29 @@ module.exports = {
         // TODO validation
 
         teamModel.makeTeam(data)
-            //.then(teamModel.getTeamInfo)
+            .then(function(result) {
+                return new Promise(function(resolved) {
+                    data.team_id = result;
+                    console.log(data);
+                    resolved(data);
+                });
+            })
+            .then(teamModel.getTeamProgress)
+            .then(function(result) {
+                return new Promise(function(resolved) {
+                    data.progress = result;
+                    resolved(data);
+                });
+            })
+            .then(teamModel.getTeamInfo)
+            .then(function(result) {
+                return new Promise(function(resolved) {
+                    if (data.progress.total == 0) result.team_progress = 0;
+                    else result.team_progress = data.progress.done_count/data.progress.total;
+                    result.all_progress = data.progress.all_progress;
+                    resolved(result);
+                });
+            })
             .then(function (data) {
                 res.statusCode = 200;
                 res.json({
@@ -101,6 +105,26 @@ module.exports = {
                 });
             })
             .then(teamModel.editTeamInfo)
+            .then(function() {
+                return new Promise(function(resolved) {
+                    resolved(data);
+                });
+            })
+            .then(teamModel.getTeamProgress)
+            .then(function(result) {
+                return new Promise(function(resolved) {
+                    data.progress = result;
+                    resolved(data);
+                });
+            })
+            .then(teamModel.getTeamInfo)
+            .then(function(result) {
+                return new Promise(function(resolved) {
+                    result.team_progress = data.progress.done_count/data.progress.total;
+                    result.all_progress = data.progress.all_progress;
+                    resolved(result);
+                });
+            })
             .then(function (data) {
                 res.statusCode = 200;
                 res.json({
@@ -138,28 +162,27 @@ module.exports = {
                     resolved(data);
                 });
             })
+            .then(teamModel.getTeamProgress)
+            .then(function(result) {
+                return new Promise(function(resolved) {
+                    data.progress = result;
+                    resolved(data);
+                });
+            })
             .then(teamModel.getTeamInfo)
+            .then(function(result) {
+                return new Promise(function(resolved) {
+                    result.team_progress = data.progress.done_count/data.progress.total;
+                    result.all_progress = data.progress.all_progress;
+                    console.log(result);
+                    resolved(result);
+                });
+            })
             .then(function (data) {
                 res.statusCode = 200;
                 res.json({
                     msg: '팀 상세 정보',
                     data: data
-                    // TODO data 안에 team_logo, team_progress, section_progress 추가
-                    /*data: {
-                        team_id: "10",
-                        teamname: "nexters",
-                        description: "개발자, 디자이너 모임",
-                        team_logo: "http:dev.qinshihwang/image/some",
-                        party: [10, 11, 12, 13],
-                        team_progress: 10,
-                        section_progress: {
-                            "개발자": 20,
-                            "디자이너": 20
-                        },
-                        start_date: "2016-07-01 14:04:00",
-                        end_date: "2016-07-21 14:04:00"
-                    }*/
-                    // END TODO
                 });
             })
             .catch(next);
@@ -302,6 +325,7 @@ module.exports = {
             })
             .catch(next);
     },
+
     approveRecord : function (req, res, next) {
         var data = {
             access_token: req.header('access-token'),
@@ -331,6 +355,7 @@ module.exports = {
             team_id: req.params.team_id
         };
 
+        // TODO if team member is empty delete team
         teamModel.getTeamMemberById(data)
             .then(function() {
                 return new Promise(function(resolved) {
