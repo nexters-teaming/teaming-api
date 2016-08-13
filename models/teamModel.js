@@ -256,6 +256,7 @@ var team_model = {
         });
     },
 
+    // deprecated
     getTeamCode : function(data) {
         return new Promise(function(resolved, rejected) {
             mysqlSetting.getPool()

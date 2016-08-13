@@ -18,7 +18,9 @@ var section_model = {
                         "LEFT JOIN SectionMember " +
                         "ON Section.section_id = SectionMember.member_section_id " +
                         "WHERE Section.section_team_id = ? " +
-                        "GROUP BY section_id LIMIT 20 ";
+                        "GROUP BY section_id " +
+                        "ORDER BY Section.edit_date DESC " +
+                        "LIMIT 20 ";
                     context.connection.query(sql, select, function (err, rows) {
                         if (err) {
                             var error = new Error("섹션 목록 가져오기 실패");
