@@ -26,7 +26,7 @@ module.exports = {
             section_id: req.params.section_id
         };
 
-        sectionModel.getSectionMemberById(data)
+        require('../models/teamModel').getTeamMemberById(data)
             .then(function() {
                 return new Promise(function(resolved) {
                     return resolved(data);
@@ -127,7 +127,7 @@ module.exports = {
             work_id: req.params.work_id
         };
 
-        sectionModel.getSectionMemberById(data)
+        require('../models/teamModel').getTeamMemberById(data)
             .then(function() {
                 return new Promise(function(resolved) {
                     return resolved(data);

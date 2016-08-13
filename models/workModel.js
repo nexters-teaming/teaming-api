@@ -24,6 +24,11 @@ var work_model = {
                                 error.status = 500;
                                 console.error(err);
                                 return rejected(error);
+                            } else if (rows.length == 0) {
+                                var error = new Error("할일 없음");
+                                error.status = 500;
+                                console.error(err);
+                                return rejected(error);
                             }
 
                             context.result = rows;

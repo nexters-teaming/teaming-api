@@ -114,7 +114,13 @@ var section_model = {
                                 error.status = 500;
                                 console.error(err);
                                 return rejected(error);
+                            } else if (rows.length == 0) {
+                                var error = new Error("섹션 정보 없음");
+                                error.status = 500;
+                                console.error(err);
+                                return rejected(error);
                             }
+
                             context.section_info = rows[0];
                             return resolved(context);
                         });
