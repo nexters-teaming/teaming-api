@@ -117,7 +117,7 @@ module.exports = {
             .then(workModel.getWorkProgress)
             .then(function(result) {
                 return new Promise(function(resolved) {
-                    data.progress = parseInt(result.done_count/result.total);
+                    data.progress = parseInt(result.done_count/result.total*100);
                     return resolved(data);
                 });
             })
