@@ -456,7 +456,27 @@ var work_model = {
 
     deleteWork : function(data) {
         return new Promise(function(resolved, rejected) {
-            resolved();
+            mysqlSetting.getPool()
+                .then(mysqlSetting.getConnection)
+                .then(function(context) {
+                    var del = [data.work_id];
+                    var sql = "DELETE FROM Work " +
+                        "WHERE work_id = ? ";
+                    context.connection.query(sql, del, function (err, rows) {
+                        if (err) {
+                            var error = new Error("할일 삭제");
+                            error.status = 500;
+                            console.error(err);
+                            return rejected(error);
+                        }
+
+                        context.connection.release();
+                        return resolved(rows);
+                    });
+                })
+                .catch(function(err) {
+                    return rejected(err)
+                });
         });
     },
 

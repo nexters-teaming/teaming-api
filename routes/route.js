@@ -47,6 +47,12 @@ module.exports = function(){
     router.post('/work/:team_id/:section_id/:work_id/join', api.work.joinWork);     // 할일 참여
     router.delete('/work/:team_id/:section_id/:work_id/join', api.work.exitWork);   // 할일 탈퇴
 
+    // Comment controller
+    router.get('/comment/:team_id/:section_id/:work_id', api.comment.getCommentList);               // 댓글 목록
+    router.post('/comment/:team_id/:section_id/:work_id', api.comment.makeComment);                 // 댓글 달기
+    router.put('/comment/:team_id/:section_id/:work_id/:comment_id', api.comment.editComment);      // 댓글 수정
+    router.delete('/comment/:team_id/:section_id/:work_id/:comment_id', api.comment.deleteComment); // 댓글 삭제
+
     return router;
 };
 

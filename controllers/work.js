@@ -171,14 +171,20 @@ module.exports = {
             work_id: req.params.work_id
         };
 
-        workModel.deleteWork(data)
+        sectionModel.getSectionMemberById(data)
+            .then(function() {
+                return new Promise(function(resolved) {
+                    return resolved(data);
+                });
+            })
+            .then(workModel.deleteWork)
             .then(function () {
                 res.statusCode = 200;
                 res.json({
                     msg: '할일 삭제 완료'
                 });
             })
-            .catch(errorHandler);
+            .catch(next);
     },
 
     joinWork: function (req, res, next) {
