@@ -37,20 +37,23 @@ var team_model = {
                         var all_progress = [];
                         rows.forEach(function(col) {
                             col.party = JSON.parse("["+col.party+"]");
-                            var sections = col.sections.split(",");
-                            sections.forEach(function(inner_col, inner_index) {
-                                var section = inner_col.split(":");
-                                all_progress[inner_index] = {
-                                    section_title: section[0],
-                                    section_progress: section[1]
-                                };
+                            console.log(col.sections);
+                            if (col.sections != null) {
+                                var sections = col.sections.split(",");
+                                sections.forEach(function (inner_col, inner_index) {
+                                    var section = inner_col.split(":");
+                                    all_progress[inner_index] = {
+                                        section_title: section[0],
+                                        section_progress: section[1]
+                                    };
 
-                                // input each row progress
-                                if (sections.length == inner_index+1) {
-                                    col.all_progress = all_progress;
-                                    all_progress = [];
-                                }
-                            });
+                                    // input each row progress
+                                    if (sections.length == inner_index + 1) {
+                                        col.all_progress = all_progress;
+                                        all_progress = [];
+                                    }
+                                });
+                            }
                             // if end calculate each progress then delete key of sections
                             delete col['sections'];
                         });
