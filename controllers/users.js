@@ -20,7 +20,9 @@ module.exports = {
         var data = {
             access_token: req.header('access-token'),
             user_id: req.body.user_id,
-            username: req.body.username
+            username: req.body.username,
+            email: req.body.email,
+            user_picture: req.body.user_picture
         };
 
         // TODO validation

@@ -172,7 +172,11 @@ module.exports = {
             .then(teamModel.getTeamInfo)
             .then(function(result) {
                 return new Promise(function(resolved) {
-                    result.team_progress = data.progress.done_count/data.progress.total;
+                    console.log(data.progress);
+                    if(data.progress.done_count == 0 && data.progress.total == 0)
+                        result.team_progress = 0;
+                    else
+                        result.team_progress = data.progress.done_count/data.progress.total;
                     result.all_progress = data.progress.all_progress;
                     console.log(result);
                     resolved(result);

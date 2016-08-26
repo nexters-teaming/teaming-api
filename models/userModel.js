@@ -20,11 +20,13 @@ var user_model = {
                         "`access_token` = ? ";
                     context.connection.query(sql, insert, function (err, rows) {
                         if (err) {
+                            context.connection.release();
                             var error = new Error("로그인 실패");
                             error.status = 500;
                             console.error(err);
                             return rejected(error);
                         } else if(rows.affectedRows == 0) {
+                            context.connection.release();
                             var error = new Error("로그인 실패");
                             error.status = 500;
                             return rejected(error);
@@ -49,11 +51,13 @@ var user_model = {
                         "WHERE user_id = (SELECT user_id FROM User WHERE access_token = ?) ";
                     context.connection.query(sql, select, function (err, rows) {
                         if (err) {
+                            context.connection.release();
                             var error = new Error("로그아웃 실패");
                             error.status = 500;
                             console.error(err);
                             return rejected(error);
                         } else if (rows.affectedRows == 0) {
+                            context.connection.release();
                             var error = new Error("잘못된 접근");
                             error.status = 204;
                             console.error(err);
@@ -79,11 +83,13 @@ var user_model = {
                         "WHERE user_id = ? ";
                     context.connection.query(sql, select, function (err, rows) {
                         if (err) {
+                            context.connection.release();
                             var error = new Error("가져오기 실패");
                             error.status = 500;
                             console.error(err);
                             return rejected(error);
                         } else if (rows.length == 0) {
+                            context.connection.release();
                             var error = new Error("유저 정보 없음");
                             error.status = 500;
                             console.error("유저 정보 없음");
@@ -109,11 +115,13 @@ var user_model = {
                         "WHERE access_token = ? ";
                     context.connection.query(sql, select, function (err, rows) {
                         if (err) {
+                            context.connection.release();
                             var error = new Error("가져오기 실패");
                             error.status = 500;
                             console.error(err);
                             return rejected(error);
                         } else if (rows.length == 0) {
+                            context.connection.release();
                             var error = new Error("유저 정보 없음");
                             error.status = 500;
                             console.error("유저 정보 없음");
@@ -140,11 +148,13 @@ var user_model = {
                         "WHERE access_token = ? ";
                     context.connection.query(sql, select, function (err, rows) {
                         if (err) {
+                            context.connection.release();
                             var error = new Error("정보 변경 실패");
                             error.status = 500;
                             console.error(err);
                             return rejected(error);
                         } else if (rows.affectedRows == 0) {
+                            context.connection.release();
                             var error = new Error("유저 정보 없음");
                             error.status = 500;
                             console.error(err);
